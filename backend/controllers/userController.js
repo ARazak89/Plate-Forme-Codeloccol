@@ -1,0 +1,221 @@
+import User from '../models/User.js';
+import Project from '../models/Project.js';
+import Hackathon from '../models/Hackathon.js';
+import Evaluation from '../models/Evaluation.js';
+import Notification from '../models/Notification.js';
+import bcrypt from 'bcryptjs'; // Importez bcryptjs pour le hachage des mots de passe
+
+export async function me(req, res) {
+  const u = req.user;
+
+  // Récupérer les projets de l'utilisateur
+  const projects = await Project.find({ student: u._id });
+
+  // Récupérer les hackathons de l'utilisateur
+  const hackathons = await Hackathon.find({ participants: u._id });
+
+  // Récupérer les badges de l'utilisateur
+  const userWithBadges = await User.findById(u._id).populate('badges');
+  const badges = userWithBadges ? userWithBadges.badges : [];
+
+  // Calculer la progression (nombre total de projets, nombre de projets complétés)
+  const totalProjects = await Project.countDocuments(); // Ceci devrait être le total des projets DANS LE PARCOURS de l'apprenant
+  const completedProjects = await Project.countDocuments({ student: u._id, status: 'approved' });
+
+  res.json({
+    id: u._id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    status: u.status,
+    daysRemaining: u.daysRemaining,
+    level: u.level,
+    lastLogin: u.lastLogin,
+    projects,
+    hackathons,
+    badges,
+    progress: {
+      currentProject: completedProjects,
+      totalProjects: totalProjects, // Ceci est un placeholder, à adapter selon le parcours de l'apprenant
+    },
+  });
+}
+
+export async function unblock(req, res) {
+  try {
+    const { id } = req.params;
+    const u = await User.findByIdAndUpdate(id, { status: 'active' }, { new: true });
+    res.json({ id: u._id, status: u.status });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateUserNameAndEmail(req, res) {
+  try {
+    // Cette fonction est désormais réservée aux administrateurs pour modifier le nom et l'email d'un utilisateur.
+    // L'utilisateur régulier ne peut pas modifier son propre nom ou email via cet endpoint.
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Non autorisé à modifier le nom ou l\'email de l\'utilisateur.' });
+    }
+
+    const { id } = req.params; // L'ID de l'utilisateur à modifier, passé dans l'URL pour le staff/admin
+    const { name, email } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { name, email },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    res.json({ message: 'Profil mis à jour avec succès.', user: { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateUserPassword(req, res) {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Vérifier l'ancien mot de passe
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Ancien mot de passe incorrect.' });
+    }
+
+    // Hacher le nouveau mot de passe
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: 'Mot de passe mis à jour avec succès.' });
+  } catch (e) {
+    console.error("Error updating password:", e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateUserProfilePicture(req, res) {
+  try {
+    // L'URL de l'image est maintenant générée par Multer après le téléchargement
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier image n\'a été téléchargé.' });
+    }
+
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Construire l'URL publique de l'image
+    // req.file.path contient le chemin complet du fichier sur le serveur
+    // Nous devons le rendre relatif à la base URL du serveur pour le frontend
+    const profilePictureUrl = `/uploads/profile_pictures/${req.file.filename}`;
+
+    user.profilePicture = profilePictureUrl;
+    await user.save();
+
+    res.status(200).json({ message: 'Photo de profil mise à jour avec succès.', profilePicture: user.profilePicture });
+  } catch (e) {
+    console.error("Error updating profile picture:", e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function listUsers(req, res) {
+  try {
+    const users = await User.find({ role: 'apprenant' })
+      .select('-password -projects') // Exclure les mots de passe et le tableau de tous les projets
+      .populate({
+        path: 'projects',
+        match: { status: { $in: ['assigned', 'pending', 'approved'] } }, // Filtrer les projets actifs
+        select: 'title status', // Sélectionner uniquement le titre et le statut
+      });
+
+    const usersWithAssignedProject = users.map(user => {
+      // Trouver le projet assigné (qui n'est ni 'approved' ni 'rejected')
+      const assignedProject = user.projects.find(p => p.status === 'assigned' || p.status === 'pending');
+      return {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        level: user.level,
+        daysRemaining: user.daysRemaining,
+        assignedProject: assignedProject ? { title: assignedProject.title, id: assignedProject._id, status: assignedProject.status } : null,
+      };
+    });
+
+    res.status(200).json(usersWithAssignedProject);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function getUserById(req, res) {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    res.status(200).json(user);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateUserRole(req, res) {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['apprenant', 'staff', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Rôle invalide.' });
+    }
+
+    const user = await User.findByIdAndUpdate(id, { role }, { new: true, runValidators: true }).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    res.status(200).json({ message: 'Rôle utilisateur mis à jour avec succès.', user });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function deleteUser(req, res) {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    // Supprimer les projets, évaluations, notifications associés à l'utilisateur
+    await Project.deleteMany({ student: id });
+    await Evaluation.deleteMany({ evaluator: id });
+    await Notification.deleteMany({ user: id });
+
+    // Retirer l'utilisateur des listes de participants des hackathons
+    await Hackathon.updateMany({ participants: id }, { $pull: { participants: id } });
+
+    res.status(200).json({ message: 'Utilisateur et données associées supprimés avec succès.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
