@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Script from 'next/script'; // Importez Script
+import { getAuthToken } from '../utils/auth'; // Importer la fonction getAuthToken
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -11,62 +12,91 @@ const Layout = ({ children }) => {
   const [daysRemaining, setDaysRemaining] = useState(0);
   const [notificationsCount, setNotificationsCount] = useState(0);
   const router = useRouter();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const [token, setToken] = useState(null); // Gérer le token localement
+  const [loading, setLoading] = useState(true); // Nouvel état de chargement
 
   useEffect(() => {
-    if (!token) {
-      router.push('/login');
-      return;
+    // Au premier chargement, essayer de récupérer le token depuis localStorage
+    if (!token && typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+      } else {
+        // Si aucun token, définir l'état comme chargé et rediriger
+        setLoading(false);
+        router.push('/login');
+        return;
+      }
     }
 
-    const fetchUserData = async () => {
-      try {
-        const res = await fetch(`${API}/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to fetch user data');
-        const data = await res.json();
-        setUser(data);
-        setDaysRemaining(data.daysRemaining || 0);
-      } catch (e) {
-        console.error('Error fetching user data:', e);
-        localStorage.removeItem('token');
-        router.push('/login');
-      }
-    };
+    if (token) {
+      const fetchUserData = async () => {
+        try {
+          const res = await fetch(`${API}/users/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            // Si le token est invalide, le supprimer et rediriger
+            localStorage.removeItem('token');
+            router.push('/login');
+            return;
+          }
+          const data = await res.json();
+          setUser(data);
+          setDaysRemaining(data.daysRemaining || 0);
+          setLoading(false); // Fin du chargement après la récupération des données
+        } catch (e) {
+          console.error('Error fetching user data:', e);
+          localStorage.removeItem('token'); // S'assurer que le token invalide est supprimé
+          router.push('/login');
+          setLoading(false);
+        }
+      };
 
-    const fetchNotificationsCount = async () => {
-      try {
-        const res = await fetch(`${API}/notifications/count`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to fetch notifications count');
-        const data = await res.json();
-        setNotificationsCount(data.count);
-      } catch (e) {
-        console.error('Error fetching notifications count:', e);
-      }
-    };
+      const fetchNotificationsCount = async () => {
+        try {
+          const res = await fetch(`${API}/notifications/count`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('Failed to fetch notifications count');
+          const data = await res.json();
+          setNotificationsCount(data.count);
+        } catch (e) {
+          console.error('Error fetching notifications count:', e);
+        }
+      };
 
-    fetchUserData();
-    fetchNotificationsCount();
+      fetchUserData();
+      fetchNotificationsCount();
 
-    // Exemple: Mettre à jour le chrono et les notifications toutes les minutes
-    const interval = setInterval(() => {
-      fetchUserData(); // Pour mettre à jour les jours restants
-      fetchNotificationsCount(); // Pour mettre à jour les notifications
-    }, 60000); // Toutes les minutes
+      const interval = setInterval(() => {
+        fetchUserData();
+        fetchNotificationsCount();
+      }, 60000);
 
-    return () => clearInterval(interval);
-  }, [token]);
+      return () => clearInterval(interval);
+    }
+  }, [token, router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     router.push('/login');
   };
 
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Chargement...</span>
+        </div>
+        <p className="ms-2">Chargement de l'application...</p>
+      </div>
+    );
+  }
+
   if (!user) {
-    return <div className="text-center mt-5"><p className="lead">Chargement de l'utilisateur...</p></div>;
+    // Si pas d'utilisateur après chargement (par ex. redirection vers login), ne rien afficher
+    return null;
   }
 
   return (

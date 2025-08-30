@@ -1,0 +1,42 @@
+body {
+  font-family: 'Inter', sans-serif; /* Une police plus moderne */
+  background-color: #f8f9fa; /* Arrière-plan légèrement gris */
+  color: #343a40; /* Couleur de texte par défaut */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #212529;
+}
+
+a {
+  color: #007bff; /* Couleur des liens par défaut de Bootstrap */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.card {
+  border-radius: 0.75rem; /* Coins plus arrondis pour les cartes */
+  border: none; /* Supprimer la bordure par défaut */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Ombre subtile pour un effet de profondeur */
+}
+
+.btn {
+  border-radius: 0.5rem; /* Coins plus arrondis pour les boutons */
+}
+
+.navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.form-control, .form-select {
+  border-radius: 0.5rem;
+  border-color: #ced4da;
+}
+
+.modal-content {
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}

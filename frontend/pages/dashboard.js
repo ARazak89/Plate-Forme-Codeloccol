@@ -5,6 +5,7 @@ import HackathonList from '../components/HackathonList';
 import BadgeDisplay from '../components/BadgeDisplay';
 import ProgressTracker from '../components/ProgressTracker';
 import React from 'react'; // Added for React.Fragment
+import { getAuthToken } from '../utils/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -57,11 +58,12 @@ export default function Dashboard() {
   const [success, setSuccess] = useState(null); // Ajoutez cet état si non présent
   const [isLoading, setIsLoading] = useState(true); // Nouvel état de chargement
   const [myCreatedSlots, setMyCreatedSlots] = useState([]); // Nouveau: Slots créés par l'apprenant
+  const [token, setToken] = useState(null); // Gérer le token localement
   const router = useRouter();
-  let token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
   // Utilisez useCallback pour memoizer fetchData et la rendre accessible
   const fetchData = useCallback(async () => {
+    if (!token) return; // Ne pas exécuter si le token est null
     setIsLoading(true); // Début du chargement
     try {
       // Fetch user data
@@ -197,24 +199,31 @@ export default function Dashboard() {
   }, [token, setMe, setProjects, setHackathons, setBadges, setProgress, setMySubmittedEvaluations, setEvaluationsAsEvaluator, setUpcomingEvaluations, setMyCreatedSlots, setNotifications, setCurrentNotification, setShowNotificationModal, setError, setIsLoading, setProjectsAwaitingStaffReview, setLearners, setAllProjects, setAllPendingEvaluationsForStaff, setMyProjects]); // Ajouter setMyProjects ici
 
   useEffect(() => {
-    // Gérer le jeton OAuth de l'URL
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const oauthToken = urlParams.get('token');
-      if (oauthToken) {
-        localStorage.setItem('token', oauthToken);
-        // Après avoir défini le token, fetchData sera appelée par l'effet suivant
-        router.replace('/dashboard', undefined, { shallow: true });
-        return; // Ne pas appeler fetchData ici, laisser l'effet du token le faire
+    // Tenter de récupérer le token une seule fois au montage du composant
+    const storedToken = getAuthToken();
+    if (storedToken && !token) {
+      setToken(storedToken);
+      // Gérer le jeton OAuth de l'URL si applicable, après l'initialisation du token
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthToken = urlParams.get('token');
+        if (oauthToken) {
+          localStorage.setItem('token', oauthToken);
+          setToken(oauthToken); // Mettre à jour l'état du token
+          router.replace('/dashboard', undefined, { shallow: true });
+          return;
+        }
       }
-    }
-
-    if (!token) {
+    } else if (!storedToken && !token) {
+      // Si aucun token n'est trouvé (ni stocké, ni en OAuth) et que l'état n'est pas encore défini
       router.push('/login');
       return;
     }
-    
-    fetchData(); // Appeler fetchData ici après que le token soit validé ou récupéré
+
+    // Appeler fetchData seulement si le token est présent dans l'état
+    if (token) {
+      fetchData();
+    }
 
   }, [token, router, fetchData]);
 
@@ -577,7 +586,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
+    <div className="container mt-4 pt-5">
       <h1 className="mb-4">Tableau de bord</h1>
       {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
       {success && <div className="alert alert-success mt-3" role="alert">{success}</div>}
@@ -597,7 +606,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="col-md-6 col-lg-8 mb-3">
-            {me.role === 'apprenant' && (
+            {me.role === 'apprenant' && progress && (
               <ProgressTracker level={me.level} daysRemaining={me.daysRemaining} progress={progress} />
             )}
           </div>
@@ -609,21 +618,23 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-secondary text-white">
+              <div className="card-header bg-gradient bg-primary text-white d-flex align-items-center">
+                <i className="bi bi-calendar-check me-2"></i>
                 <h2 className="h5 mb-0">Mes Slots de Disponibilité</h2>
               </div>
               <div className="card-body">
-                <div className="list-group">
+                <div className="list-group list-group-flush">
                   {myCreatedSlots.map(slot => (
-                    <div key={slot._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <div key={slot._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                       <div>
-                        <h5 className="mb-1">
+                        <h5 className="mb-1 text-primary">
+                          <i className="bi bi-calendar-event me-2"></i>
                           {new Date(slot.startTime).toLocaleDateString()} de {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} à {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </h5>
                         {slot.isBooked ? (
-                          <small className="text-success">Occupé par {slot.bookedByStudent ? slot.bookedByStudent.name : '[Utilisateur inconnu]'} pour {slot.bookedForProject ? slot.bookedForProject.title : '[Projet inconnu]'}</small>
+                          <small className="text-success d-flex align-items-center mt-1"><i className="bi bi-person-check me-1"></i> Occupé par {slot.bookedByStudent ? slot.bookedByStudent.name : '[Utilisateur inconnu]'} pour {slot.bookedForProject ? slot.bookedForProject.title : '[Projet inconnu]'}</small>
                         ) : (
-                          <small className="text-primary">Disponible</small>
+                          <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-check-circle me-1"></i> Disponible</small>
                         )}
                       </div>
                     </div>
@@ -640,25 +651,25 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-info text-white">
+              <div className="card-header bg-gradient bg-info text-white d-flex align-items-center">
+                <i className="bi bi-hourglass-split me-2"></i>
                 <h2 className="h5 mb-0">Mes Projets Soumis en Attente d'Évaluation</h2>
               </div>
               <div className="card-body">
-                <div className="list-group">
+                <div className="list-group list-group-flush">
                   {mySubmittedEvaluations.map(evaluation => (
-                    <div key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <div key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                       <div>
                         <h5 className="mb-1">
-                          Projet: {evaluation.project.title}
-                          {evaluation.project.status === 'pending' && <span className="badge bg-warning text-dark ms-2">En Attente Pairs</span>}
-                          {evaluation.project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2">En Attente Staff</span>}
-                          {evaluation.project.status === 'approved' && <span className="badge bg-success ms-2">Approuvé</span>}
-                          {evaluation.project.status === 'rejected' && <span className="badge bg-danger ms-2">Rejeté</span>}
+                          <i className="bi bi-journal-text me-2"></i> Projet: {evaluation.project.title}
+                          {evaluation.project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill">En Attente Pairs</span>}
+                          {evaluation.project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill">En Attente Staff</span>}
+                          {evaluation.project.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
+                          {evaluation.project.status === 'rejected' && <span className="badge bg-danger ms-2 rounded-pill">Rejeté</span>}
                         </h5>
-                        <small className="text-muted">Évaluateur: {evaluation.evaluator.name}</small><br/>
-                        <small className="text-muted">Date & Heure d'évaluation: {new Date(evaluation.slot.startTime).toLocaleString()}</small>
+                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Évaluateur: {evaluation.evaluator.name}</small>
+                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date & Heure d'évaluation: {new Date(evaluation.slot.startTime).toLocaleString()}</small>
                       </div>
-                      {/* Pas de bouton d'action ici pour l'apprenant qui a soumis */}
                     </div>
                   ))}
                 </div>
@@ -673,21 +684,22 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-primary text-white">
+              <div className="card-header bg-gradient bg-success text-white d-flex align-items-center">
+                <i className="bi bi-folder-check me-2"></i>
                 <h2 className="h5 mb-0">Mes Projets ({myProjects.length})</h2>
               </div>
               <div className="card-body">
-                <div className="list-group">
+                <div className="list-group list-group-flush">
                   {myProjects.map(project => (
-                    <div key={project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <div key={project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                       <div>
                         <h5 className="mb-1">
-                          {project.title}
-                          {project.status === 'assigned' && <span className="badge bg-warning text-dark ms-2">Assigné</span>}
-                          {project.status === 'approved' && <span className="badge bg-success ms-2">Approuvé</span>}
+                          <i className="bi bi-folder-open me-2"></i> {project.title}
+                          {project.status === 'assigned' && <span className="badge bg-warning text-dark ms-2 rounded-pill">Assigné</span>}
+                          {project.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
                         </h5>
-                        <small className="text-muted">Description: {project.description}</small><br/>
-                        {project.repoUrl && <small className="text-muted">Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{project.repoUrl}</a></small>}
+                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-file-earmark-text me-1"></i> Description: {project.description}</small>
+                        {project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-link-45deg me-1"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{project.repoUrl}</a></small>}
                       </div>
                     </div>
                   ))}
@@ -703,11 +715,12 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-danger text-white">
+              <div className="card-header bg-gradient bg-warning text-dark d-flex align-items-center">
+                <i className="bi bi-list-check me-2"></i>
                 <h2 className="h5 mb-0">Corrections à Venir {me.role !== 'apprenant' && '(Toutes les évaluations en attente)'}</h2>
               </div>
               <div className="card-body">
-                <ul className="list-group">
+                <ul className="list-group list-group-flush">
                   {me.role === 'apprenant' ? (
                     // Affichage pour l'apprenant
                     upcomingEvaluations.map((evaluation) => {
@@ -716,20 +729,18 @@ export default function Dashboard() {
                       const isEvaluationActive = now >= evaluationTime;
 
                       return (
-                        <li key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                        <li key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                           <div>
-                            <h5 className="mb-1">Projet: {evaluation.project.title}</h5>
-                            <small className="text-muted">Apprenant: {evaluation.student.name}</small><br/>
-                            <small className="text-muted">
-                              Date: {evaluationTime.toLocaleDateString()} à {evaluationTime.toLocaleTimeString()}
-                            </small><br/>
-                            <small className="text-muted">Description: {evaluation.project.description}</small><br/>
-                            <small className="text-muted">Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{evaluation.project.repoUrl}</a></small>
+                            <h5 className="mb-1 text-info"><i className="bi bi-calendar-check me-2"></i> Projet: {evaluation.project.title}</h5>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationTime.toLocaleDateString()} à {evaluationTime.toLocaleTimeString()}</small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{evaluation.project.repoUrl}</a></small>
                           </div>
                           <button
                             onClick={() => handleOpenEvaluationModal(evaluation)}
                             disabled={!isEvaluationActive}
-                            className={`btn btn-sm mt-2 mt-md-0 ${isEvaluationActive ? 'btn-warning' : 'btn-secondary cursor-not-allowed'}`}
+                            className={`btn btn-sm mt-2 mt-md-0 ${isEvaluationActive ? 'btn-warning' : 'btn-secondary disabled'}`}
                           >
                             {isEvaluationActive ? 'Évaluer le projet' : `Actif à ${evaluationTime.toLocaleTimeString()}`}
                           </button>
@@ -751,15 +762,15 @@ export default function Dashboard() {
                         acc[projectId].evaluations.push(evaluation);
                         return acc;
                       }, {})).map((projectGroup) => (
-                        <li key={projectGroup.project._id} className="list-group-item d-flex flex-column align-items-start flex-wrap mb-3">
+                        <li key={projectGroup.project._id} className="list-group-item d-flex flex-column align-items-start flex-wrap mb-3 py-3">
                           <div>
-                            <h5 className="mb-1">Projet: {projectGroup.project.title} (Soumis par: {projectGroup.project.student?.name})</h5>
-                            <small className="text-muted">Statut du projet: <span className="badge bg-info">{projectGroup.project.status}</span></small><br/>
-                            <small className="text-muted">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{projectGroup.project.repoUrl}</a></small>
+                            <h5 className="mb-1"><i className="bi bi-journals me-2"></i> Projet: {projectGroup.project.title} (Soumis par: {projectGroup.project.student?.name})</h5>
+                            <small className="text-muted d-flex align-items-center mt-1">Statut du projet: <span className="badge bg-info ms-1 rounded-pill">{projectGroup.project.status}</span></small>
+                            <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></small>
                           </div>
-                          <div className="mt-2 w-100">
+                          <div className="mt-3 w-100">
                             <strong>Évaluations des pairs :</strong>
-                            <ul className="list-group mt-1">
+                            <ul className="list-group mt-2">
                               {projectGroup.evaluations.map(evalItem => {
                                 const evaluationTime = new Date(evalItem.slot.endTime); // Heure de fin du slot
                                 const submissionTime = evalItem.submissionDate ? new Date(evalItem.submissionDate) : null;
@@ -788,13 +799,13 @@ export default function Dashboard() {
                                 }
 
                                 return (
-                                  <li key={evalItem._id} className="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>
-                                      Évaluateur: <strong>{evalItem.evaluator.name}</strong> ({evalItem.evaluator.email})
+                                  <li key={evalItem._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                    <span className="d-flex align-items-center">
+                                      <i className="bi bi-person-check me-2"></i> Évaluateur: <strong>{evalItem.evaluator.name}</strong> ({evalItem.evaluator.email})
                                     </span>
                                     <div>
-                                      <span className={`badge me-2 ${statusBadgeClass}`}>{statusText}</span>
-                                      <span className="badge bg-secondary">{timeStatus}</span>
+                                      <span className={`badge me-2 rounded-pill ${statusBadgeClass}`}>{statusText}</span>
+                                      <span className="badge bg-secondary rounded-pill">{timeStatus}</span>
                                     </div>
                                   </li>
                                 );
@@ -804,7 +815,7 @@ export default function Dashboard() {
                         </li>
                       ))
                     ) : (
-                      <p>Aucune évaluation en attente pour le moment.</p>
+                      <p className="text-center text-muted py-3">Aucune évaluation en attente pour le moment.</p>
                     )
                   )}
                 </ul>
@@ -851,32 +862,33 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-primary text-white">
+              <div className="card-header bg-gradient bg-danger text-white d-flex align-items-center">
+                <i className="bi bi-file-earmark-check me-2"></i>
                 <h2 className="h5 mb-0">Projets en Attente de Révision Finale (Personnel)</h2>
               </div>
               <div className="card-body">
-                <ul className="list-group">
+                <ul className="list-group list-group-flush">
                   {projectsAwaitingStaffReview.map(project => (
-                    <li key={project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <li key={project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                       <div>
-                        <h5 className="mb-1">Projet: {project.title}</h5>
-                        <small className="text-muted">Soumis par: {project.student.name}</small><br/>
-                        <small className="text-muted">Statut actuel: <span className="badge bg-info">En Attente Staff</span></small><br/>
-                        {project.repoUrl && <small className="text-muted">Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{project.repoUrl}</a></small>}<br/>
-                        <small className="text-muted">Date de soumission: {new Date(project.submissionDate).toLocaleDateString()}</small>
+                        <h5 className="mb-1 text-danger"><i className="bi bi-exclamation-triangle me-2"></i> Projet: {project.title}</h5>
+                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Soumis par: {project.student.name}</small>
+                        <small className="text-muted d-flex align-items-center mt-1">Statut actuel: <span className="badge bg-info ms-1 rounded-pill">En Attente Staff</span></small>
+                        {project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{project.repoUrl}</a></small>}
+                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date de soumission: {new Date(project.submissionDate).toLocaleDateString()}</small>
                       </div>
-                      <div className="d-flex flex-column flex-md-row">
+                      <div className="d-flex flex-column flex-md-row mt-2 mt-md-0">
                         <button
                           className="btn btn-sm btn-success mt-2 mt-md-0 me-md-2"
                           onClick={() => handleFinalStaffReview(project._id, 'approved')}
                         >
-                          Approuver Finalement
+                          <i className="bi bi-check-circle me-1"></i> Approuver
                         </button>
                         <button
                           className="btn btn-sm btn-danger mt-2 mt-md-0"
                           onClick={() => handleFinalStaffReview(project._id, 'rejected')}
                         >
-                          Rejeter Finalement
+                          <i className="bi bi-x-circle me-1"></i> Rejeter
                         </button>
                       </div>
                     </li>
@@ -893,44 +905,45 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-dark text-white">
+              <div className="card-header bg-gradient bg-dark text-white d-flex justify-content-between align-items-center">
+                <i className="bi bi-people me-2"></i>
                 <h2 className="h5 mb-0">Liste des Apprenants</h2>
               </div>
               <div className="card-body">
                 <div className="table-responsive">
-                  <table className="table table-striped table-hover">
+                  <table className="table table-hover table-sm caption-top">
+                    <caption>Liste des apprenants inscrits</caption>
                     <thead>
-                      <tr>
+                      <tr className="table-light">
                         <th>Nom</th>
                         <th>Email</th>
                         <th>Niveau</th>
                         <th>Jours Restants</th>
                         <th>Projet Assigné</th>
-                        <th>Détails</th>
+                        <th className="text-center">Détails</th>
                       </tr>
                     </thead>
                     <tbody>
                       {learners.map(learner => (
                         <React.Fragment key={learner._id}>
-                          <tr>
+                          <tr className="align-middle">
                             <td>{learner.name}</td>
                             <td>{learner.email}</td>
                             <td>{learner.level}</td>
                             <td>{learner.daysRemaining}</td>
                             <td>
                               {learner.assignedProject ? (
-                                <span className={`badge bg-${learner.assignedProject.status === 'assigned' ? 'primary' : learner.assignedProject.status === 'pending' ? 'warning' : 'info'}`}>
+                                <span className={`badge rounded-pill bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'}`}>
                                   {learner.assignedProject.title}
                                 </span>
                               ) : (
-                                'Aucun'
+                                <span className="badge rounded-pill bg-secondary">Aucun</span>
                               )}
                             </td>
-                            <td>
+                            <td className="text-center">
                               <button 
-                                className="btn btn-sm btn-outline-secondary"
+                                className="btn btn-sm btn-outline-secondary py-0 px-1"
                                 onClick={() => {
-                                  // Toggle pour montrer/cacher les détails
                                   const newExpandedLearners = { ...expandedLearners };
                                   if (newExpandedLearners[learner._id]) {
                                     delete newExpandedLearners[learner._id];
@@ -939,19 +952,31 @@ export default function Dashboard() {
                                   }
                                   setExpandedLearners(newExpandedLearners);
                                 }}
+                                aria-expanded={expandedLearners[learner._id]}
+                                aria-controls={`learner-details-${learner._id}`}
                               >
                                 <i className={`bi bi-chevron-${expandedLearners[learner._id] ? 'up' : 'down'}`}></i>
                               </button>
                             </td>
                           </tr>
-                          {expandedLearners[learner._id] && learner.assignedProject && (
+                          {expandedLearners[learner._id] && (
                             <tr>
-                              <td colSpan="6">
-                                <div className="alert alert-info p-2 mt-1 mb-1">
-                                  <strong>Détails du Projet:</strong>
-                                  <p className="mb-0">Titre: {learner.assignedProject.title}</p>
-                                  <p className="mb-0">Statut: {learner.assignedProject.status}</p>
-                                  {/* Vous pouvez ajouter d'autres détails du projet ici si populés dans le backend */}
+                              <td colSpan="6" className="p-0 border-0">
+                                <div className="collapse show" id={`learner-details-${learner._id}`}>
+                                  <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
+                                    <strong>Détails du Projet Assigné:</strong>
+                                    {learner.assignedProject ? (
+                                      <>
+                                        <p className="mb-1">Titre: {learner.assignedProject.title}</p>
+                                        <p className="mb-1">Statut: <span className={`badge bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'}`}>{learner.assignedProject.status}</span></p>
+                                        {learner.assignedProject.repoUrl && <p className="mb-1">Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
+                                        {learner.assignedProject.submissionDate && <p className="mb-1">Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
+                                        {/* Ajoutez d'autres détails pertinents ici */}
+                                      </>
+                                    ) : (
+                                      <p className="text-muted">Aucun projet actuellement assigné.</p>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -972,7 +997,8 @@ export default function Dashboard() {
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
+              <div className="card-header bg-gradient bg-success text-white d-flex justify-content-between align-items-center">
+                <i className="bi bi-journals me-2"></i>
                 <h2 className="h5 mb-0">Gestion des Projets</h2>
                 <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
                   <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
@@ -1005,10 +1031,10 @@ export default function Dashboard() {
                               </span>
                             </td>
                             <td>
-                              <button className="btn btn-sm btn-info me-2" onClick={() => handleEditProject(project)} title="Modifier">
-                                <i className="bi bi-pencil"></i>
+                              <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(project)} title="Modifier">
+                                <i className="bi bi-pencil-square"></i>
                               </button>
-                              <button className="btn btn-sm btn-danger" onClick={() => handleDeleteProject(project._id)} title="Supprimer">
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(project._id)} title="Supprimer">
                                 <i className="bi bi-trash"></i>
                               </button>
                             </td>
@@ -1043,7 +1069,7 @@ export default function Dashboard() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-success text-white">
+              <div className="modal-header bg-gradient bg-primary text-white">
                 <h5 className="modal-title">Créer un Slot de Disponibilité</h5>
                 <button type="button" className="btn-close" onClick={() => setShowCreateSlotModal(false)}></button>
               </div>
@@ -1110,7 +1136,7 @@ export default function Dashboard() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-primary text-white">
+              <div className="modal-header bg-gradient bg-info text-white">
                 <h5 className="modal-title">Notification de Réservation de Slot</h5>
                 <button type="button" className="btn-close" onClick={handleCloseNotificationModal}></button>
               </div>
@@ -1132,7 +1158,7 @@ export default function Dashboard() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header bg-success text-white">
+              <div className="modal-header bg-gradient bg-success text-white">
                 <h5 className="modal-title">{currentProjectToEdit ? 'Modifier le Projet' : 'Ajouter un Projet'}</h5>
                 <button type="button" className="btn-close" onClick={() => {setShowAddProjectModal(false); setShowEditProjectModal(false); setCurrentProjectToEdit(null);}}></button>
               </div>
@@ -1222,7 +1248,7 @@ export default function Dashboard() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
+              <div className="modal-header bg-gradient bg-danger text-white">
                 <h5 className="modal-title">Confirmer la Suppression</h5>
                 <button type="button" className="btn-close" onClick={() => {setShowDeleteProjectModal(false); setCurrentProjectToDelete(null); setConfirmProjectTitle('');}}></button>
               </div>
@@ -1259,7 +1285,7 @@ export default function Dashboard() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
+              <div className="modal-header bg-gradient bg-warning text-dark">
                 <h5 className="modal-title">Évaluer le Projet: {currentEvaluationToSubmit.project.title}</h5>
                 <button type="button" className="btn-close" onClick={handleCloseEvaluationModal}></button>
               </div>

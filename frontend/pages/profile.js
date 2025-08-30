@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { getAuthToken } from '../utils/auth'; // Importer la fonction getAuthToken
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 const STATIC_ASSETS_BASE_URL = API.replace('/api', '');
@@ -15,7 +16,7 @@ export default function Profile() {
   const [showPasswordModal, setShowPasswordModal] = useState(false); // État pour la modale du mot de passe
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false); // État pour la modale de la photo
   const router = useRouter();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = getAuthToken(); // Utiliser la fonction d'aide
 
   useEffect(() => {
     if (!token) {
@@ -111,17 +112,25 @@ export default function Profile() {
     }
   };
 
-  if (!user) return <p>Chargement du profil...</p>;
+  if (!user) return (
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Chargement...</span>
+      </div>
+      <p className="ms-2">Chargement du profil...</p>
+    </div>
+  );
 
   return (
-    <div className="container mt-5">
+    <div className="container mt-4 pt-5">
       <h1 className="mb-4">Mon Profil</h1>
 
-      {success && <div className="alert alert-success" role="alert">{success}</div>}
-      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {success && <div className="alert alert-success mt-3" role="alert">{success}</div>}
+      {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
 
       <div className="card mb-4 shadow-sm">
-        <div className="card-header bg-primary text-white">
+        <div className="card-header bg-gradient bg-primary text-white d-flex align-items-center">
+          <i className="bi bi-person-circle me-2"></i>
           <h2 className="h5 mb-0">Informations Générales</h2>
         </div>
         <div className="card-body">
@@ -129,25 +138,25 @@ export default function Profile() {
             <img
               src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.png'}
               alt="Photo de profil"
-              className="rounded-circle border border-3"
+              className="rounded-circle border border-3 border-primary"
               style={{ width: '150px', height: '150px', objectFit: 'cover' }}
             />
           </div>
-          <p><strong>Nom:</strong> {user.name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Rôle:</strong> {user.role}</p>
-          <p><strong>Statut:</strong> {user.status}</p>
-          <p><strong>Jours Restants:</strong> {user.daysRemaining}</p>
-          <p><strong>Niveau:</strong> {user.level}</p>
-          <p><strong>Dernière Connexion:</strong> {new Date(user.lastLogin).toLocaleDateString()}</p>
-          <p><strong>Projets Complétés:</strong> {user.totalProjectsCompleted}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-person me-2"></i>Nom:</strong> {user.name}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-envelope me-2"></i>Email:</strong> {user.email}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-briefcase me-2"></i>Rôle:</strong> <span className="badge bg-primary">{user.role}</span></p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-activity me-2"></i>Statut:</strong> <span className="badge bg-success">{user.status}</span></p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-hourglass-split me-2"></i>Jours Restants:</strong> {user.daysRemaining}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-graph-up me-2"></i>Niveau:</strong> {user.level}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-clock me-2"></i>Dernière Connexion:</strong> {new Date(user.lastLogin).toLocaleDateString()}</p>
+          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-check-circle me-2"></i>Projets Complétés:</strong> {user.totalProjectsCompleted}</p>
 
           <div className="d-flex justify-content-center mt-4 gap-3">
-            <button className="btn btn-info" onClick={() => setShowProfilePictureModal(true)}>
-              Changer la photo de profil
+            <button className="btn btn-outline-info d-flex align-items-center" onClick={() => setShowProfilePictureModal(true)}>
+              <i className="bi bi-image me-2"></i> Changer la photo
             </button>
-            <button className="btn btn-warning" onClick={() => setShowPasswordModal(true)}>
-              Changer le mot de passe
+            <button className="btn btn-outline-warning d-flex align-items-center" onClick={() => setShowPasswordModal(true)}>
+              <i className="bi bi-key me-2"></i> Changer le mot de passe
             </button>
           </div>
         </div>
@@ -158,7 +167,7 @@ export default function Profile() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-info text-white">
+              <div className="modal-header bg-gradient bg-info text-white">
                 <h5 className="modal-title">Changer la Photo de Profil</h5>
                 <button type="button" className="btn-close" onClick={() => setShowProfilePictureModal(false)}></button>
               </div>
@@ -175,7 +184,9 @@ export default function Profile() {
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-info">Mettre à jour la photo</button>
+                  <button type="submit" className="btn btn-info d-flex align-items-center">
+                    <i className="bi bi-upload me-2"></i> Mettre à jour la photo
+                  </button>
                 </form>
               </div>
             </div>
@@ -188,7 +199,7 @@ export default function Profile() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
+              <div className="modal-header bg-gradient bg-warning text-dark">
                 <h5 className="modal-title">Changer le Mot de Passe</h5>
                 <button type="button" className="btn-close" onClick={() => setShowPasswordModal(false)}></button>
               </div>
@@ -227,14 +238,15 @@ export default function Profile() {
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-warning">Changer le Mot de Passe</button>
+                  <button type="submit" className="btn btn-warning d-flex align-items-center">
+                    <i className="bi bi-save me-2"></i> Changer le Mot de Passe
+                  </button>
                 </form>
               </div>
             </div>
           </div>
         </div>
       )}
-      {/* Pour afficher l'overlay de la modale */}
       {(showPasswordModal || showProfilePictureModal) && <div className="modal-backdrop fade show"></div>}
     </div>
   );
