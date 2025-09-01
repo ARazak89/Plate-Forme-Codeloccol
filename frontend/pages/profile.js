@@ -134,28 +134,45 @@ export default function Profile() {
           <h2 className="h5 mb-0">Informations Générales</h2>
         </div>
         <div className="card-body">
-          <div className="text-center mb-4">
-            <img
-              src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.png'}
-              alt="Photo de profil"
-              className="rounded-circle border border-3 border-primary"
-              style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-            />
+          <div className="row align-items-center mb-4">
+            <div className="col-md-auto text-center mb-3 mb-md-0">
+              <img
+                src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.png'}
+                alt="Photo de profil"
+                className="rounded-circle border border-4 border-primary shadow-sm"
+                style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+              />
+            </div>
+            <div className="col-md">
+              <h4 className="mb-1 text-primary">{user.name}</h4>
+              <p className="text-muted mb-0">{user.email}</p>
+            </div>
           </div>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-person me-2"></i>Nom:</strong> {user.name}</p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-envelope me-2"></i>Email:</strong> {user.email}</p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-briefcase me-2"></i>Rôle:</strong> <span className="badge bg-primary">{user.role}</span></p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-activity me-2"></i>Statut:</strong> <span className="badge bg-success">{user.status}</span></p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-hourglass-split me-2"></i>Jours Restants:</strong> {user.daysRemaining}</p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-graph-up me-2"></i>Niveau:</strong> {user.level}</p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-clock me-2"></i>Dernière Connexion:</strong> {new Date(user.lastLogin).toLocaleDateString()}</p>
-          <p className="d-flex align-items-center"><strong className="me-2"><i className="bi bi-check-circle me-2"></i>Projets Complétés:</strong> {user.totalProjectsCompleted}</p>
 
-          <div className="d-flex justify-content-center mt-4 gap-3">
-            <button className="btn btn-outline-info d-flex align-items-center" onClick={() => setShowProfilePictureModal(true)}>
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-briefcase me-2 text-primary"></i>Rôle:</strong> <span className="badge bg-primary">{user.role}</span></p>
+              <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-activity me-2 text-success"></i>Statut:</strong> <span className="badge bg-success">{user.status}</span></p>
+              {user.role === 'apprenant' && (
+                <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-hourglass-split me-2 text-warning"></i>Jours Restants:</strong> {user.daysRemaining}</p>
+              )}
+            </div>
+            <div className="col-md-6 mb-3">
+              {user.role === 'apprenant' && (
+                <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-graph-up me-2 text-info"></i>Niveau:</strong> {user.level}</p>
+              )}
+              <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-clock me-2 text-muted"></i>Dernière Connexion:</strong> {new Date(user.lastLogin).toLocaleDateString()}</p>
+              {user.role === 'apprenant' && (
+                <p className="d-flex align-items-center mb-1"><strong className="me-2"><i className="bi bi-check-circle me-2 text-success"></i>Projets Complétés:</strong> {user.totalProjectsCompleted}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="d-flex flex-wrap justify-content-center mt-4 gap-3">
+            <button className="btn btn-outline-primary d-flex align-items-center" onClick={() => setShowProfilePictureModal(true)}>
               <i className="bi bi-image me-2"></i> Changer la photo
             </button>
-            <button className="btn btn-outline-warning d-flex align-items-center" onClick={() => setShowPasswordModal(true)}>
+            <button className="btn btn-outline-primary d-flex align-items-center" onClick={() => setShowPasswordModal(true)}>
               <i className="bi bi-key me-2"></i> Changer le mot de passe
             </button>
           </div>
@@ -167,11 +184,13 @@ export default function Profile() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-gradient bg-info text-white">
+              <div className="modal-header bg-gradient bg-primary text-white">
                 <h5 className="modal-title">Changer la Photo de Profil</h5>
                 <button type="button" className="btn-close" onClick={() => setShowProfilePictureModal(false)}></button>
               </div>
               <div className="modal-body">
+                {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
+                {success && <div className="alert alert-success mb-3" role="alert">{success}</div>}
                 <form onSubmit={handleUpdateProfilePicture}>
                   <div className="mb-3">
                     <label htmlFor="profilePictureFile" className="form-label">Sélectionner une nouvelle photo</label>
@@ -184,7 +203,7 @@ export default function Profile() {
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-info d-flex align-items-center">
+                  <button type="submit" className="btn btn-primary d-flex align-items-center">
                     <i className="bi bi-upload me-2"></i> Mettre à jour la photo
                   </button>
                 </form>
@@ -199,11 +218,13 @@ export default function Profile() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header bg-gradient bg-warning text-dark">
+              <div className="modal-header bg-gradient bg-primary text-white">
                 <h5 className="modal-title">Changer le Mot de Passe</h5>
                 <button type="button" className="btn-close" onClick={() => setShowPasswordModal(false)}></button>
               </div>
               <div className="modal-body">
+                {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
+                {success && <div className="alert alert-success mb-3" role="alert">{success}</div>}
                 <form onSubmit={handleChangePassword}>
                   <div className="mb-3">
                     <label htmlFor="oldPassword" className="form-label">Ancien Mot de Passe</label>
@@ -238,7 +259,7 @@ export default function Profile() {
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-warning d-flex align-items-center">
+                  <button type="submit" className="btn btn-primary d-flex align-items-center">
                     <i className="bi bi-save me-2"></i> Changer le Mot de Passe
                   </button>
                 </form>

@@ -58,10 +58,11 @@ export async function createProject(req, res) {
 export async function listMyProjects(req, res) {
   const projects = await Project.find({
     student: req.user._id,
-    status: { $in: ['assigned', 'approved'] },
+    status: { $in: ['assigned', 'pending', 'approved'] },
   })
     .sort({ createdAt: -1 })
-    .populate('student', 'name'); // Populer le nom de l'étudiant si besoin pour l'affichage
+    .populate('student', 'name') // Populer le nom de l'étudiant si besoin pour l'affichage
+    .populate('templateProject', 'title order'); // Populer le projet template pour la déduplication
   res.json(projects);
 }
 

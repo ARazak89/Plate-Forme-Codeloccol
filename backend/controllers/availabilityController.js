@@ -1,6 +1,7 @@
 import AvailabilitySlot from "../models/AvailabilitySlot.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
+import Project from "../models/Project.js";
 
 // Fonction pour qu'un apprenant (évaluateur) crée des slots de disponibilité
 export async function createAvailabilitySlot(req, res) {
@@ -22,6 +23,14 @@ export async function createAvailabilitySlot(req, res) {
       return res
         .status(400)
         .json({ error: "La durée d'un slot ne peut pas dépasser 2 jours." });
+    }
+
+    // Nouvelle validation : L'heure de début du slot ne doit pas être plus de 48 heures dans le futur
+    const fortyEightHoursFromNow = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    if (start.getTime() > fortyEightHoursFromNow.getTime()) {
+      return res
+        .status(400)
+        .json({ error: "Vous ne pouvez pas créer un slot plus de 48 heures à l'avance." });
     }
 
     // Vérifier les contraintes horaires (Lundi-Vendredi, 9h-17h)
@@ -201,6 +210,75 @@ export async function getMyCreatedSlots(req, res) {
     res.status(200).json(slots);
   } catch (e) {
     console.error('Error fetching my created slots:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// Fonction pour récupérer les créneaux disponibles pour un projet spécifique
+export async function getAvailableSlotsForProject(req, res) {
+  try {
+    const { projectId } = req.params;
+    const studentId = req.user._id;
+
+    // Vérifier que le projet existe et est assigné à cet étudiant
+    const project = await Project.findOne({ 
+      _id: projectId, 
+      student: studentId,
+      status: 'assigned'
+    });
+
+    if (!project) {
+      return res.status(404).json({ 
+        error: 'Projet non trouvé ou non assigné à cet étudiant, ou déjà soumis.' 
+      });
+    }
+
+    // Récupérer tous les slots disponibles (non réservés et non expirés)
+    const now = new Date();
+    const availableSlots = await AvailabilitySlot.find({
+      isBooked: false,
+      startTime: { $gt: now }, // Seulement les slots futurs
+      evaluator: { $ne: studentId } // L'étudiant ne peut pas s'évaluer lui-même
+    })
+    .populate('evaluator', '_id') // Ne récupérer que l'ID de l'évaluateur
+    .sort('startTime');
+
+    // Grouper les slots par évaluateur pour vérifier qu'il y a au moins 2 évaluateurs différents
+    const slotsByEvaluator = availableSlots.reduce((acc, slot) => {
+      const evaluatorId = slot.evaluator._id.toString();
+      if (!acc[evaluatorId]) {
+        acc[evaluatorId] = {
+          evaluatorId: slot.evaluator._id,
+          slots: []
+        };
+      }
+      acc[evaluatorId].slots.push(slot);
+      return acc;
+    }, {});
+
+    // Convertir en tableau et s'assurer qu'il y a au moins 2 évaluateurs différents
+    const evaluatorsWithSlots = Object.values(slotsByEvaluator);
+    
+    if (evaluatorsWithSlots.length < 2) {
+      return res.status(400).json({ 
+        error: 'Il n\'y a pas assez d\'évaluateurs disponibles. Au moins 2 évaluateurs différents sont nécessaires.' 
+      });
+    }
+
+    // Retourner les slots sans les informations de l'évaluateur
+    const slotsWithoutEvaluatorInfo = availableSlots.map(slot => ({
+      _id: slot._id,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      evaluator: {
+        _id: slot.evaluator._id
+        // Pas de nom ni d'email pour masquer l'identité de l'évaluateur
+      }
+    }));
+
+    res.status(200).json(slotsWithoutEvaluatorInfo);
+  } catch (e) {
+    console.error('Error fetching available slots for project:', e);
     res.status(500).json({ error: e.message });
   }
 }

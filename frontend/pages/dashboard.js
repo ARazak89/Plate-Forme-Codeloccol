@@ -6,6 +6,7 @@ import BadgeDisplay from '../components/BadgeDisplay';
 import ProgressTracker from '../components/ProgressTracker';
 import React from 'react'; // Added for React.Fragment
 import { getAuthToken } from '../utils/auth';
+import UserSummaryCard from '../components/UserSummaryCard'; // Importation du nouveau composant
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -21,9 +22,6 @@ export default function Dashboard() {
   const [slotDate, setSlotDate] = useState('');
   const [slotStartTime, setSlotStartTime] = useState('09:00'); // Par défaut 9h
   const [slotEndTime, setSlotEndTime] = useState('09:45'); // Par défaut 9h45
-  const [notifications, setNotifications] = useState([]); // Nouvel état pour les notifications
-  const [showNotificationModal, setShowNotificationModal] = useState(false); // État pour la modale de notification
-  const [currentNotification, setCurrentNotification] = useState(null); // Notification actuellement affichée
   const [showEvaluationModal, setShowEvaluationModal] = useState(false); // Nouvel état pour la modale d'évaluation
   const [currentEvaluationToSubmit, setCurrentEvaluationToSubmit] = useState(null); // Évaluation en cours de soumission
   const [upcomingEvaluations, setUpcomingEvaluations] = useState([]); // Nouvel état pour les évaluations à venir
@@ -99,12 +97,56 @@ export default function Dashboard() {
         }
       }
 
-      // Fetch projects for the current student (assigned or approved)
+      // Fetch projects for the current student (assigned, pending, or approved)
       if (userData.role === 'apprenant') {
         const myProjectsRes = await fetch(`${API}/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
         if (myProjectsRes.ok) {
-          const myProjectsData = await myProjectsRes.json();
-          setMyProjects(myProjectsData);
+          const rawMyProjectsData = await myProjectsRes.json();
+          
+          // Dédupliquer les projets par templateProject._id en gardant le statut le plus avancé
+          const projectMap = new Map();
+          
+          rawMyProjectsData.forEach(project => {
+            // Utiliser templateProject._id comme clé, ou _id si pas de templateProject
+            const key = project.templateProject && project.templateProject._id 
+              ? project.templateProject._id 
+              : project._id;
+            
+            const existingProject = projectMap.get(key);
+            
+            if (!existingProject) {
+              projectMap.set(key, project);
+            } else {
+              // Garder le projet avec le statut le plus avancé
+              const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
+              const existingStatus = statusOrder[existingProject.status] || 0;
+              const newStatus = statusOrder[project.status] || 0;
+              
+              if (newStatus > existingStatus) {
+                projectMap.set(key, project);
+              }
+            }
+          });
+          
+          const uniqueMyProjects = Array.from(projectMap.values());
+          
+          // Trier par ordre du templateProject, puis par statut
+          const sortedMyProjects = uniqueMyProjects.sort((a, b) => {
+            // D'abord par ordre du template
+            const orderA = a.templateProject && a.templateProject.order ? a.templateProject.order : 0;
+            const orderB = b.templateProject && b.templateProject.order ? b.templateProject.order : 0;
+            
+            if (orderA !== orderB) return orderA - orderB;
+            
+            // Puis par statut (assigned > pending > approved)
+            const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
+            const statusA = statusOrder[a.status] || 0;
+            const statusB = statusOrder[b.status] || 0;
+            
+            return statusA - statusB;
+          });
+          
+          setMyProjects(sortedMyProjects);
         } else {
           const errorData = await myProjectsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de mes projets.');
@@ -112,15 +154,15 @@ export default function Dashboard() {
       }
 
       // Fetch pending evaluations as an evaluator (for all roles that can evaluate)
-      const evalAsEvaluatorRes = await fetch(`${API}/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
-      if (evalAsEvaluatorRes.ok) {
-        const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
-        setEvaluationsAsEvaluator(evalAsEvaluatorData);
+        const evalAsEvaluatorRes = await fetch(`${API}/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
+        if (evalAsEvaluatorRes.ok) {
+          const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
+          setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
-      } else {
-        const errorData = await evalAsEvaluatorRes.json();
-        throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
-      }
+        } else {
+          const errorData = await evalAsEvaluatorRes.json();
+          throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
+        }
 
       // Fetch all pending evaluations for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
@@ -132,7 +174,7 @@ export default function Dashboard() {
           const errorData = await allPendingEvalsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de toutes les évaluations en attente pour le staff.');
         }
-      }
+        }
 
       // Fetch my created slots (for apprenant only, if they are also evaluators)
       if (userData.role === 'apprenant') {
@@ -189,12 +231,9 @@ export default function Dashboard() {
         throw new Error(errorData.error || 'Échec du chargement des notifications.');
       }
       const notifData = await notifRes.json();
-      // Filtrer et afficher uniquement les nouvelles notifications de 'slot_booked'
-      const newSlotBookedNotifications = notifData.filter(notif => notif.type === 'slot_booked' && !notif.read);
+      const newSlotBookedNotifications = notifData.filter(notif => !notif.read); // Afficher toutes les nouvelles notifications non lues
       if (newSlotBookedNotifications.length > 0) {
-        setNotifications(newSlotBookedNotifications);
-        setCurrentNotification(newSlotBookedNotifications[0]); // Afficher la première comme exemple
-        setShowNotificationModal(true);
+        // setNotifications(newSlotBookedNotifications); // Supprimé
       }
 
     } catch (e) {
@@ -204,7 +243,7 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false); // Fin du chargement
     }
-  }, [token, setMe, setProjects, setHackathons, setBadges, setProgress, setMySubmittedEvaluations, setEvaluationsAsEvaluator, setUpcomingEvaluations, setMyCreatedSlots, setNotifications, setCurrentNotification, setShowNotificationModal, setError, setIsLoading, setProjectsAwaitingStaffReview, setLearners, setAllProjects, setAllPendingEvaluationsForStaff, setMyProjects]); // Ajouter setMyProjects ici
+  }, [token, setMe, setProjects, setHackathons, setBadges, setProgress, setMySubmittedEvaluations, setEvaluationsAsEvaluator, setUpcomingEvaluations, setMyCreatedSlots, setError, setIsLoading, setProjectsAwaitingStaffReview, setLearners, setAllProjects, setAllPendingEvaluationsForStaff, setMyProjects]); // Ajouter setMyProjects ici
 
   useEffect(() => {
     // Tenter de récupérer le token une seule fois au montage du composant
@@ -212,22 +251,22 @@ export default function Dashboard() {
     if (storedToken && !token) {
       setToken(storedToken);
       // Gérer le jeton OAuth de l'URL si applicable, après l'initialisation du token
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const oauthToken = urlParams.get('token');
-        if (oauthToken) {
-          localStorage.setItem('token', oauthToken);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const oauthToken = urlParams.get('token');
+      if (oauthToken) {
+        localStorage.setItem('token', oauthToken);
           setToken(oauthToken); // Mettre à jour l'état du token
-          router.replace('/dashboard', undefined, { shallow: true });
+        router.replace('/dashboard', undefined, { shallow: true });
           return;
-        }
       }
+    }
     } else if (!storedToken && !token) {
       // Si aucun token n'est trouvé (ni stocké, ni en OAuth) et que l'état n'est pas encore défini
       router.push('/login');
       return;
     }
-
+    
     // Appeler fetchData seulement si le token est présent dans l'état
     if (token) {
       fetchData();
@@ -272,24 +311,6 @@ export default function Dashboard() {
       console.error("Error creating availability slot:", e);
       setError(e.message);
     }
-  };
-
-  const handleCloseNotificationModal = async () => {
-    if (currentNotification) {
-      try {
-        // Marquer la notification comme lue sur le backend
-        await fetch(`${API}/notifications/${currentNotification._id}/read`, {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        // Supprimer la notification de la liste locale
-        setNotifications(prevNotifs => prevNotifs.filter(n => n._id !== currentNotification._id));
-      } catch (e) {
-        console.error("Error marking notification as read:", e);
-      }
-    }
-    setShowNotificationModal(false);
-    setCurrentNotification(null);
   };
 
   const handleOpenEvaluationModal = (evaluation) => {
@@ -528,6 +549,8 @@ export default function Dashboard() {
     }
   };
 
+
+
   // NOTE: La fonction renderEvaluatorDashboard n'est plus utilisée directement ici, car ses sections sont déplacées.
   // Vous pouvez la supprimer si elle n'est pas utilisée ailleurs.
   // const renderEvaluatorDashboard = () => (
@@ -638,26 +661,15 @@ export default function Dashboard() {
       {me && (
         <div className="row mb-4">
           <div className="col-md-6 col-lg-4 mb-3">
-            <div className="card shadow-sm h-100">
-              <div className="card-body">
-                <h5 className="card-title">Bonjour {me.name}</h5>
-                <p className="card-text">Rôle: <span className="badge bg-primary">{me.role}</span></p>
-                {me.role === 'apprenant' && (
-                  <button className="btn btn-success mt-3" onClick={() => setShowCreateSlotModal(true)}>
-                    Créer un slot de disponibilité
-                  </button>
-                )}
-                {(me.role === 'staff' || me.role === 'admin') && (
-                  <button className="btn btn-primary mt-3 me-2" onClick={() => setShowAddUserModal(true)}>
-                    <i className="bi bi-person-plus me-1"></i> Ajouter un Utilisateur
-                  </button>
-                )}
-              </div>
-            </div>
+            <UserSummaryCard 
+              me={me} 
+              onShowCreateSlotModal={() => setShowCreateSlotModal(true)} 
+              onShowAddUserModal={() => setShowAddUserModal(true)} 
+            />
           </div>
           <div className="col-md-6 col-lg-8 mb-3">
             {me.role === 'apprenant' && progress && (
-              <ProgressTracker level={me.level} daysRemaining={me.daysRemaining} progress={progress} />
+            <ProgressTracker level={me.level} daysRemaining={me.daysRemaining} progress={progress} />
             )}
           </div>
         </div>
@@ -680,14 +692,16 @@ export default function Dashboard() {
                     const currentTime = new Date();
                     return currentTime < oneHourAfterEndTime;
                   }).map(slot => (
-                    <div key={slot._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
+                    <div key={slot._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3 list-group-item-action">
                       <div>
-                        <h5 className="mb-1 text-primary">
+                        <h5 className="mb-1 text-primary d-flex align-items-center">
                           <i className="bi bi-calendar-event me-2"></i>
-                          {new Date(slot.startTime).toLocaleDateString()} de {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} à {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <span>
+                            {new Date(slot.startTime).toLocaleDateString()} de {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} à {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </h5>
                         {slot.isBooked ? (
-                          <small className="text-success d-flex align-items-center mt-1"><i className="bi bi-person-check me-1"></i> Occupé par {slot.bookedByStudent ? slot.bookedByStudent.name : '[Utilisateur inconnu]'} pour {slot.bookedForProject ? slot.bookedForProject.title : '[Projet inconnu]'}</small>
+                          <small className="text-success d-flex align-items-center mt-1"><i className="bi bi-person-check-fill me-1"></i> Réservé par: {slot.bookedByStudent ? <strong>{slot.bookedByStudent.name}</strong> : '[Utilisateur inconnu]'} pour le projet: {slot.bookedForProject ? <strong>{slot.bookedForProject.title}</strong> : '[Projet inconnu]'}</small>
                         ) : (
                           <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-check-circle me-1"></i> Disponible</small>
                         )}
@@ -702,18 +716,44 @@ export default function Dashboard() {
       )}
 
       {/* Section des évaluations de MES PROJETS SOUMIS */}
-      {me && me.role === 'apprenant' && mySubmittedEvaluations.length > 0 && (
+      {me && me.role === 'apprenant' && mySubmittedEvaluations.length > 0 && (() => {
+        // Filtrer les projets en attente (exclure approved et rejected)
+        const pendingProjects = Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
+          const projectId = evaluation.project._id;
+          if (!acc[projectId]) {
+            acc[projectId] = {
+              project: evaluation.project,
+              evaluators: []
+            };
+          }
+          acc[projectId].evaluators.push(evaluation.evaluator.name);
+          if (!acc[projectId].submissionDate && evaluation.project.submissionDate) {
+            acc[projectId].submissionDate = evaluation.project.submissionDate;
+          }
+          if (!acc[projectId].status) {
+            acc[projectId].status = evaluation.project.status;
+          }
+          return acc;
+        }, {}))
+        .filter(projectGroup => 
+          projectGroup.status !== 'approved' && 
+          projectGroup.status !== 'rejected'
+        );
+        
+        return pendingProjects.length > 0;
+      })() && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
               <div className="card-header bg-gradient bg-info text-white d-flex align-items-center">
                 <i className="bi bi-hourglass-split me-2"></i>
-                <h2 className="h5 mb-0">Mes Projets Soumis en Attente d'Évaluation</h2>
+                <h2 className="h5 mb-0">Projets en Cours d'Évaluation</h2>
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
-                  {mySubmittedEvaluations.length > 0 ? (
-                    Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
+                  {(() => {
+                    // Filtrer les projets en attente (exclure approved et rejected)
+                    const pendingProjects = Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
                       const projectId = evaluation.project._id;
                       if (!acc[projectId]) {
                         acc[projectId] = {
@@ -722,34 +762,38 @@ export default function Dashboard() {
                         };
                       }
                       acc[projectId].evaluators.push(evaluation.evaluator.name);
-                      // Prendre la date de soumission du premier évaluateur, car elle sera la même pour le projet
                       if (!acc[projectId].submissionDate && evaluation.project.submissionDate) {
                         acc[projectId].submissionDate = evaluation.project.submissionDate;
                       }
-                      // Prendre le statut du premier évaluateur, car il sera le même pour le projet
                       if (!acc[projectId].status) {
                         acc[projectId].status = evaluation.project.status;
                       }
                       return acc;
-                    }, {})).map(projectGroup => (
-                      <div key={projectGroup.project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
-                        <div>
-                          <h5 className="mb-1">
-                            <i className="bi bi-journal-text me-2"></i> Projet: {projectGroup.project.title}
-                            {projectGroup.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill">En Attente Pairs</span>}
-                            {projectGroup.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill">En Attente Staff</span>}
-                            {projectGroup.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
-                            {projectGroup.status === 'rejected' && <span className="badge bg-danger ms-2 rounded-pill">Rejeté</span>}
+                    }, {}))
+                    .filter(projectGroup => 
+                      projectGroup.status !== 'approved' && 
+                      projectGroup.status !== 'rejected'
+                    );
+                    
+                    return pendingProjects.length > 0 ? (
+                      pendingProjects.map(projectGroup => (
+                      <div key={projectGroup.project._id} className="card mb-3 shadow-sm border-info">
+                        <div className="card-body">
+                          <h5 className="card-title d-flex align-items-center mb-2">
+                            <i className="bi bi-journal-text me-2 text-info"></i> Projet: {projectGroup.project.title}
+                            {projectGroup.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En Attente Pairs</span>}
+                            {projectGroup.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
                           </h5>
-                          <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person-check me-1"></i> Évaluateurs: {projectGroup.evaluators.join(', ')}</small>
-                          {projectGroup.project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></small>}
-                          {projectGroup.submissionDate && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date de soumission: {new Date(projectGroup.submissionDate).toLocaleString()}</small>}
+                          <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: <strong>{projectGroup.evaluators.join(', ')}</strong></p>
+                          {projectGroup.project.repoUrl && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-muted"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></p>}
+                          {projectGroup.submissionDate && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(projectGroup.submissionDate).toLocaleString()}</p>}
                         </div>
                       </div>
                     ))
                   ) : (
                     <p className="text-center text-muted py-3">Aucun projet soumis en attente d'évaluation.</p>
-                  )}
+                  );
+                })()}
                 </div>
               </div>
             </div>
@@ -757,32 +801,51 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Nouveau: Section pour les projets que j'ai créés */}
+      {/* Section pour tous les projets assignés à l'apprenant */}
       {me && me.role === 'apprenant' && myProjects.length > 0 && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
               <div className="card-header bg-gradient bg-success text-white d-flex align-items-center">
                 <i className="bi bi-folder-check me-2"></i>
-                <h2 className="h5 mb-0">Mes Projets ({myProjects.length})</h2>
+                <h2 className="h5 mb-0">Mes Projets Assignés ({myProjects.length})</h2>
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
                   {myProjects.map(project => (
                     <div
                       key={project._id}
-                      className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3"
-                      onClick={() => router.push('/projects')}
-                      style={{ cursor: 'pointer' }}
+                      className="card mb-3 shadow-sm border-success transform-hover"
                     >
-                      <div>
-                        <h5 className="mb-1">
-                          <i className="bi bi-folder-open me-2"></i> {project.title}
-                          {project.status === 'assigned' && <span className="badge bg-warning text-dark ms-2 rounded-pill">Assigné</span>}
-                          {project.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
-                        </h5>
-                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-file-earmark-text me-1"></i> Description: {project.description}</small>
-                        {project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-link-45deg me-1"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{project.repoUrl}</a></small>}
+                      <div className="card-body d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div className="flex-grow-1 mb-2 mb-md-0" onClick={() => router.push('/projects')} style={{ cursor: 'pointer' }}>
+                          <h5 className="card-title d-flex align-items-center mb-1">
+                            <i className="bi bi-folder-open me-2 text-success"></i> {project.title}
+                            <span className={`badge rounded-pill bg-${
+                              project.status === 'assigned' ? 'warning text-dark' :
+                              project.status === 'pending' ? 'info' :
+                              'success'
+                            } ms-2`}>
+                              <i className={`bi bi-${
+                                project.status === 'assigned' ? 'clock' :
+                                project.status === 'pending' ? 'hourglass-split' :
+                                'check-circle'
+                              } me-1`}></i>
+                              {project.status === 'assigned' ? 'Assigné' :
+                               project.status === 'pending' ? 'En cours d\'évaluation' :
+                               'Approuvé'}
+                            </span>
+                            {project.templateProject && project.templateProject.order && (
+                              <small className="text-muted ms-2">(Projet {project.templateProject.order})</small>
+                            )}
+                          </h5>
+                          <p className="card-text mb-1 text-muted d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Description: {project.description}</p>
+                        </div>
+                        {project.repoUrl && (
+                          <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm d-flex align-items-center mt-2 mt-md-0">
+                            <i className="bi bi-github me-2"></i> Voir le Dépôt GitHub
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -814,7 +877,7 @@ export default function Dashboard() {
                     }).map((evaluation) => {
                       const evaluationStartTime = new Date(evaluation.slot.startTime);
                       const evaluationEndTime = new Date(evaluation.slot.endTime);
-                      const now = new Date();
+                    const now = new Date();
 
                       const gracePeriodEnd = new Date(evaluationEndTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
 
@@ -823,22 +886,22 @@ export default function Dashboard() {
                                          now < evaluationStartTime ? `Actif à ${evaluationStartTime.toLocaleTimeString()}` :
                                          'Évaluation expirée';
 
-                      return (
+                    return (
                         <li key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
-                          <div>
+                        <div>
                             <h5 className="mb-1 text-info"><i className="bi bi-calendar-check me-2"></i> Projet: {evaluation.project.title}</h5>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationStartTime.toLocaleDateString()} de {evaluationStartTime.toLocaleTimeString()} à {evaluationEndTime.toLocaleTimeString()}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{evaluation.project.repoUrl}</a></small>
-                          </div>
-                          <button
-                            onClick={() => handleOpenEvaluationModal(evaluation)}
-                            disabled={!isEvaluationActive}
+                        </div>
+                        <button
+                          onClick={() => handleOpenEvaluationModal(evaluation)}
+                          disabled={!isEvaluationActive}
                             className={`btn btn-sm mt-2 mt-md-0 ${isEvaluationActive ? 'btn-warning' : 'btn-secondary disabled'}`}
-                          >
+                        >
                             {buttonText}
-                          </button>
+                        </button>
                         </li>
                       );
                     })
@@ -912,9 +975,9 @@ export default function Dashboard() {
                                       <span className={`badge me-2 rounded-pill ${statusBadgeClass}`}>{statusText}</span>
                                       <span className="badge bg-secondary rounded-pill">{timeStatus}</span>
                                     </div>
-                                  </li>
-                                );
-                              })}
+                      </li>
+                    );
+                  })}
                             </ul>
                           </div>
                         </li>
@@ -1016,26 +1079,26 @@ export default function Dashboard() {
               </div>
               <div className="card-body">
                 <div className="table-responsive">
-                  <table className="table table-hover table-sm caption-top">
+                  <table className="table table-hover table-striped table-sm caption-top align-middle">
                     <caption>Liste des apprenants inscrits</caption>
-                    <thead>
-                      <tr className="table-light">
+                    <thead className="table-light">
+                      <tr>
                         <th>Nom</th>
                         <th>Email</th>
-                        <th>Niveau</th>
-                        <th>Jours Restants</th>
+                        <th className="text-center">Niveau</th>
+                        <th className="text-center">Jours Restants</th>
                         <th>Projet Assigné</th>
-                        <th className="text-center">Détails</th>
+                        <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {learners.map(learner => (
                         <React.Fragment key={learner._id}>
-                          <tr className="align-middle">
+                          <tr>
                             <td>{learner.name}</td>
                             <td>{learner.email}</td>
-                            <td>{learner.level}</td>
-                            <td>{learner.daysRemaining}</td>
+                            <td className="text-center"><span className="badge bg-primary">{learner.level}</span></td>
+                            <td className="text-center"><span className="badge bg-info">{learner.daysRemaining}</span></td>
                             <td>
                               {learner.assignedProject ? (
                                 <span className={`badge rounded-pill bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'}`}>
@@ -1059,6 +1122,7 @@ export default function Dashboard() {
                                 }}
                                 aria-expanded={expandedLearners[learner._id]}
                                 aria-controls={`learner-details-${learner._id}`}
+                                title={expandedLearners[learner._id] ? 'Masquer les détails' : 'Voir les détails'}
                               >
                                 <i className={`bi bi-chevron-${expandedLearners[learner._id] ? 'up' : 'down'}`}></i>
                               </button>
@@ -1069,17 +1133,16 @@ export default function Dashboard() {
                               <td colSpan="6" className="p-0 border-0">
                                 <div className="collapse show" id={`learner-details-${learner._id}`}>
                                   <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
-                                    <strong>Détails du Projet Assigné:</strong>
+                                    <h6 className="text-primary mb-2">Détails du Projet Assigné:</h6>
                                     {learner.assignedProject ? (
                                       <>
-                                        <p className="mb-1">Titre: {learner.assignedProject.title}</p>
-                                        <p className="mb-1">Statut: <span className={`badge bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'}`}>{learner.assignedProject.status}</span></p>
-                                        {learner.assignedProject.repoUrl && <p className="mb-1">Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
-                                        {learner.assignedProject.submissionDate && <p className="mb-1">Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
-                                        {/* Ajoutez d'autres détails pertinents ici */}
+                                        <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
+                                        <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: <span className={`badge bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'} ms-1`}>{learner.assignedProject.status}</span></p>
+                                        {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
+                                        {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
                                       </>
                                     ) : (
-                                      <p className="text-muted">Aucun projet actuellement assigné.</p>
+                                      <p className="text-muted d-flex align-items-center"><i className="bi bi-x-circle me-2"></i> Aucun projet actuellement assigné.</p>
                                     )}
                                   </div>
                                 </div>
@@ -1114,32 +1177,33 @@ export default function Dashboard() {
                   <p>Aucun projet disponible.</p>
                 ) : (
                   <div className="table-responsive">
-                    <table className="table table-striped table-hover">
-                      <thead>
+                    <table className="table table-striped table-hover align-middle">
+                      <thead className="table-light">
                         <tr>
                           <th>Titre</th>
                           <th>Description</th>
                           <th>Étudiant</th>
                           <th>Statut</th>
-                          <th>Actions</th>
+                          <th className="text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {allProjects.map(project => (
                           <tr key={project._id}>
-                            <td>{project.title}</td>
+                            <td><i className="bi bi-journal-text me-2"></i>{project.title}</td>
                             <td>{project.description.substring(0, 50)}...</td>
-                            <td>{project.student ? project.student.name : 'Template'}</td>
+                            <td>{project.student ? <span className="badge bg-secondary"><i className="bi bi-person me-1"></i>{project.student.name}</span> : <span className="badge bg-dark">Template</span>}</td>
                             <td>
-                              <span className={`badge bg-${project.status === 'approved' ? 'success' : project.status === 'rejected' ? 'danger' : 'warning'}`}>
-                                {project.status}
+                              <span className={`badge bg-${project.status === 'approved' ? 'success' : project.status === 'rejected' ? 'danger' : project.status === 'template' ? 'dark' : 'warning'} rounded-pill`}>
+                                <i className={`bi bi-${project.status === 'approved' ? 'check-circle' : project.status === 'rejected' ? 'x-circle' : project.status === 'template' ? 'file-earmark' : 'hourglass-split'} me-1`}></i>
+                                {project.status === 'approved' ? 'Approuvé' : project.status === 'rejected' ? 'Rejeté' : project.status === 'template' ? 'Modèle' : 'En attente'}
                               </span>
                             </td>
-                            <td>
-                              <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(project)} title="Modifier">
+                            <td className="text-center">
+                              <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(project)} title="Modifier le projet">
                                 <i className="bi bi-pencil-square"></i>
                               </button>
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(project._id)} title="Supprimer">
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(project._id)} title="Supprimer le projet">
                                 <i className="bi bi-trash"></i>
                               </button>
                             </td>
@@ -1179,9 +1243,11 @@ export default function Dashboard() {
                 <button type="button" className="btn-close" onClick={() => setShowCreateSlotModal(false)}></button>
               </div>
               <div className="modal-body">
+                {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
+                {success && <div className="alert alert-success mb-3" role="alert">{success}</div>}
                 <form onSubmit={handleCreateSlot}>
                   <div className="mb-3">
-                    <label htmlFor="slotDate" className="form-label">Date</label>
+                    <label htmlFor="slotDate" className="form-label">Date <span className="text-danger">*</span></label>
                     <input
                       type="date"
                       className="form-control"
@@ -1192,7 +1258,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="slotStartTime" className="form-label">Heure de début</label>
+                    <label htmlFor="slotStartTime" className="form-label">Heure de début <span className="text-danger">*</span></label>
                     <input
                       type="time"
                       className="form-control"
@@ -1214,7 +1280,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="slotEndTime" className="form-label">Heure de fin</label>
+                    <label htmlFor="slotEndTime" className="form-label">Heure de fin <span className="text-danger">*</span></label>
                     <input
                       type="time"
                       className="form-control"
@@ -1227,7 +1293,18 @@ export default function Dashboard() {
                       readOnly // Rendre l'heure de fin non modifiable manuellement
                     />
                   </div>
-                  <button type="submit" className="btn btn-success">Créer le slot</button>
+                  <button type="submit" className="btn btn-success d-flex align-items-center" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Création...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-plus-circle me-2"></i> Créer le slot
+                      </>
+                    )}
+                  </button>
                 </form>
               </div>
             </div>
@@ -1235,222 +1312,6 @@ export default function Dashboard() {
         </div>
       )}
       {showCreateSlotModal && <div className="modal-backdrop fade show"></div>}
-
-      {/* Modale pour les notifications de slot réservé */}
-      {showNotificationModal && currentNotification && (
-        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-gradient bg-info text-white">
-                <h5 className="modal-title">Notification de Réservation de Slot</h5>
-                <button type="button" className="btn-close" onClick={handleCloseNotificationModal}></button>
-              </div>
-              <div className="modal-body">
-                <p>{currentNotification.message}</p>
-                <small className="text-muted">Reçu le: {new Date(currentNotification.createdAt).toLocaleString()}</small>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={handleCloseNotificationModal}>Fermer</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showNotificationModal && <div className="modal-backdrop fade show"></div>}
-
-      {/* Modale pour ajouter/modifier un projet (staff/admin) */}
-      {(showAddProjectModal || showEditProjectModal) && (
-        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header bg-gradient bg-success text-white">
-                <h5 className="modal-title">{currentProjectToEdit ? 'Modifier le Projet' : 'Ajouter un Projet'}</h5>
-                <button type="button" className="btn-close" onClick={() => {setShowAddProjectModal(false); setShowEditProjectModal(false); setCurrentProjectToEdit(null);}}></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={currentProjectToEdit ? handleUpdateProject : handleAddProject}>
-                  <div className="mb-3">
-                    <label htmlFor="projectTitle" className="form-label">Titre du Projet</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="projectTitle"
-                      value={projectTitle}
-                      onChange={(e) => setProjectTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="projectDescription" className="form-label">Description</label>
-                    <textarea
-                      className="form-control"
-                      id="projectDescription"
-                      rows="3"
-                      value={projectDescription}
-                      onChange={(e) => setProjectDescription(e.target.value)}
-                      required
-                    ></textarea>
-                  </div>
-                  {/* Pour les projets templates, repoUrl n'est pas requis. Pour les projets d'apprenant, il le sera. */}
-                  {currentProjectToEdit && currentProjectToEdit.student && (
-                    <div className="mb-3">
-                      <label htmlFor="projectRepoUrl" className="form-label">URL du Dépôt GitHub</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        id="projectRepoUrl"
-                        value={projectRepoUrl}
-                        onChange={(e) => setProjectRepoUrl(e.target.value)}
-                        required
-                      />
-                    </div>
-                  )}
-                  <div className="mb-3">
-                    <label htmlFor="projectDemoVideoUrl" className="form-label">URL Vidéo de Démonstration (Optionnel)</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      id="projectDemoVideoUrl"
-                      value={projectDemoVideoUrl}
-                      onChange={(e) => setProjectDemoVideoUrl(e.target.value)}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="projectSpecifications" className="form-label">Spécifications (Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectSpecifications"
-                      rows="3"
-                      value={projectSpecifications}
-                      onChange={(e) => setProjectSpecifications(e.target.value)}
-                    ></textarea>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="projectSize" className="form-label">Taille du Projet</label>
-                    <select
-                      className="form-select"
-                      id="projectSize"
-                      value={projectSize}
-                      onChange={(e) => setProjectSize(e.target.value)}
-                      required
-                    >
-                      <option value="short">Court (1 jour)</option>
-                      <option value="medium">Moyen (2 jours)</option>
-                      <option value="long">Long (3 jours)</option>
-                    </select>
-                  </div>
-                  <button type="submit" className="btn btn-success">{currentProjectToEdit ? 'Modifier' : 'Ajouter'} le Projet</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {(showAddProjectModal || showEditProjectModal) && <div className="modal-backdrop fade show"></div>}
-
-      {/* Modale de confirmation de suppression de projet */}
-      {showDeleteProjectModal && currentProjectToDelete && (
-        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-gradient bg-danger text-white">
-                <h5 className="modal-title">Confirmer la Suppression</h5>
-                <button type="button" className="btn-close" onClick={() => {setShowDeleteProjectModal(false); setCurrentProjectToDelete(null); setConfirmProjectTitle('');}}></button>
-              </div>
-              <div className="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer le projet "<strong>{currentProjectToDelete.title}</strong>" ? Cette action est irréversible.</p>
-                <p>Veuillez taper le titre du projet (exactement) pour confirmer :</p>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={confirmProjectTitle}
-                  onChange={(e) => setConfirmProjectTitle(e.target.value)}
-                  placeholder={currentProjectToDelete.title}
-                />
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => {setShowDeleteProjectModal(false); setCurrentProjectToDelete(null); setConfirmProjectTitle('');}}>Annuler</button>
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
-                  onClick={() => handleDeleteProjectConfirmed(currentProjectToDelete._id)}
-                  disabled={confirmProjectTitle !== currentProjectToDelete.title} // Désactivé si le titre ne correspond pas
-                >
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showDeleteProjectModal && <div className="modal-backdrop fade show"></div>}
-
-      {/* Modale pour l'ajout d'utilisateur (staff/admin) */}
-      {showAddUserModal && (
-        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-gradient bg-primary text-white">
-                <h5 className="modal-title">Ajouter un Utilisateur</h5>
-                <button type="button" className="btn-close" onClick={() => {setShowAddUserModal(false); setNewUserName(''); setNewUserEmail(''); setNewUserPassword(''); setNewUserRole('apprenant');}}></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleAddUser}>
-                  <div className="mb-3">
-                    <label htmlFor="newUserName" className="form-label">Nom</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="newUserName"
-                      value={newUserName}
-                      onChange={(e) => setNewUserName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="newUserEmail" className="form-label">Email</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      id="newUserEmail"
-                      value={newUserEmail}
-                      onChange={(e) => setNewUserEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="newUserPassword" className="form-label">Mot de passe</label>
-                    <input
-                      type="password"
-                      className="form-control"
-                      id="newUserPassword"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="newUserRole" className="form-label">Rôle</label>
-                    <select
-                      className="form-select"
-                      id="newUserRole"
-                      value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value)}
-                      required
-                    >
-                      <option value="apprenant">Apprenant</option>
-                      <option value="staff">Staff</option>
-                      <option value="admin">Administrateur</option>
-                    </select>
-                  </div>
-                  <button type="submit" className="btn btn-success">Ajouter l'Utilisateur</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showAddUserModal && <div className="modal-backdrop fade show"></div>}
 
       {/* Modale pour l'évaluation de projet */}
       {showEvaluationModal && currentEvaluationToSubmit && (
@@ -1465,13 +1326,13 @@ export default function Dashboard() {
                 {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
                 {success && <div className="alert alert-success mt-3" role="alert">{success}</div>}
 
-                <p><strong>Apprenant:</strong> {currentEvaluationToSubmit.student.name}</p>
-                <p><strong>URL Dépôt GitHub:</strong> <a href={currentEvaluationToSubmit.project.repoUrl} target="_blank" rel="noopener noreferrer">{currentEvaluationToSubmit.project.repoUrl}</a></p>
-                <p>Veuillez fournir votre appréciation pour les points suivants (obligatoire pour accepter):</p>
+                <p className="d-flex align-items-center mb-1"><strong><i className="bi bi-person me-2"></i>Apprenant:</strong> {currentEvaluationToSubmit.student.name}</p>
+                <p className="d-flex align-items-center mb-3"><strong><i className="bi bi-github me-2"></i>URL Dépôt GitHub:</strong> <a href={currentEvaluationToSubmit.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{currentEvaluationToSubmit.project.repoUrl}</a></p>
+                <p className="alert alert-info py-2 d-flex align-items-center"><i className="bi bi-info-circle me-2"></i> Veuillez fournir votre appréciation pour les points suivants (obligatoire pour accepter):</p>
 
                 <form>
                   <div className="mb-3">
-                    <label htmlFor="feedbackAssiduite" className="form-label">Assiduité</label>
+                    <label htmlFor="feedbackAssiduite" className="form-label">Assiduité <span className="text-danger">*</span></label>
                     <textarea
                       className="form-control"
                       id="feedbackAssiduite"
@@ -1483,7 +1344,7 @@ export default function Dashboard() {
                     ></textarea>
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="feedbackComprehension" className="form-label">Compréhension des projets</label>
+                    <label htmlFor="feedbackComprehension" className="form-label">Compréhension des projets <span className="text-danger">*</span></label>
                     <textarea
                       className="form-control"
                       id="feedbackComprehension"
@@ -1495,7 +1356,7 @@ export default function Dashboard() {
                     ></textarea>
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="feedbackSpecifications" className="form-label">Respect des spécifications</label>
+                    <label htmlFor="feedbackSpecifications" className="form-label">Respect des spécifications <span className="text-danger">*</span></label>
                     <textarea
                       className="form-control"
                       id="feedbackSpecifications"
@@ -1507,7 +1368,7 @@ export default function Dashboard() {
                     ></textarea>
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="feedbackMaitriseConcepts" className="form-label">Maîtrise des concepts</label>
+                    <label htmlFor="feedbackMaitriseConcepts" className="form-label">Maîtrise des concepts <span className="text-danger">*</span></label>
                     <textarea
                       className="form-control"
                       id="feedbackMaitriseConcepts"
@@ -1519,7 +1380,7 @@ export default function Dashboard() {
                     ></textarea>
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="feedbackCapaciteExpliquer" className="form-label">Capacité à expliquer</label>
+                    <label htmlFor="feedbackCapaciteExpliquer" className="form-label">Capacité à expliquer <span className="text-danger">*</span></label>
                     <textarea
                       className="form-control"
                       id="feedbackCapaciteExpliquer"
@@ -1533,14 +1394,34 @@ export default function Dashboard() {
                 </form>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-danger" onClick={() => handleSubmitFeedback('rejected')}>Refuser le projet</button>
+                <button type="button" className="btn btn-danger d-flex align-items-center" onClick={() => handleSubmitFeedback('rejected')} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Rejet en cours...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-x-circle me-2"></i> Refuser le projet
+                    </>
+                  )}
+                </button>
                 <button 
                   type="button" 
-                  className="btn btn-success" 
+                  className="btn btn-success d-flex align-items-center" 
                   onClick={() => handleSubmitFeedback('accepted')}
-                  disabled={Object.values(feedback).some(value => value.trim() === '')}
+                  disabled={isLoading || Object.values(feedback).some(value => value.trim() === '')}
                 >
-                  Accepter le projet
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Acceptation...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-2"></i> Accepter le projet
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1548,6 +1429,88 @@ export default function Dashboard() {
         </div>
       )}
       {showEvaluationModal && <div className="modal-backdrop fade show"></div>}
+
+      {/* Modale pour ajouter un utilisateur (staff/admin) */}
+      {showAddUserModal && (
+        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header bg-gradient bg-primary text-white">
+                <h5 className="modal-title"><i className="bi bi-person-plus me-2"></i> Ajouter un Nouvel Utilisateur</h5>
+                <button type="button" className="btn-close" onClick={() => setShowAddUserModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
+                {success && <div className="alert alert-success mb-3" role="alert">{success}</div>}
+                <form onSubmit={handleAddUser}>
+                  <div className="mb-3">
+                    <label htmlFor="newUserName" className="form-label">Nom <span className="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="newUserName"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserEmail" className="form-label">Email <span className="text-danger">*</span></label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      id="newUserEmail"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserPassword" className="form-label">Mot de Passe <span className="text-danger">*</span></label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      id="newUserPassword"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserRole" className="form-label">Rôle <span className="text-danger">*</span></label>
+                    <select
+                      className="form-select"
+                      id="newUserRole"
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value)}
+                      required
+                    >
+                      <option value="apprenant">Apprenant</option>
+                      <option value="staff">Staff</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-primary d-flex align-items-center" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Ajout en cours...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-person-plus me-2"></i> Ajouter l'utilisateur
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddUserModal && <div className="modal-backdrop fade show"></div>}
+
+
     </div>
   );
 }
