@@ -1,6 +1,7 @@
-import '../styles/global.css'; // Importez vos styles globaux ici
 import 'bootstrap/dist/css/bootstrap.min.css'; // Assurez-vous que Bootstrap est importé
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Importez les icônes Bootstrap
+import '../styles/global.css'; // Importez vos styles globaux ici
+
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
