@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [projectDemoVideoUrl, setProjectDemoVideoUrl] = useState('');
   const [projectSpecifications, setProjectSpecifications] = useState('');
   const [projectSize, setProjectSize] = useState('short');
+
   const [myProjects, setMyProjects] = useState([]); // Nouvel état pour les projets de l'apprenant
   const [confirmProjectTitle, setConfirmProjectTitle] = useState(''); // Nouvel état pour la double confirmation
 
@@ -60,6 +61,13 @@ export default function Dashboard() {
   const [myCreatedSlots, setMyCreatedSlots] = useState([]); // Nouveau: Slots créés par l'apprenant
   const [token, setToken] = useState(null); // Gérer le token localement
   const router = useRouter();
+
+  // Nouveaux états pour l'ajout d'utilisateur (staff/admin)
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState('apprenant'); // Rôle par défaut
 
   // Utilisez useCallback pour memoizer fetchData et la rendre accessible
   const fetchData = useCallback(async () => {
@@ -483,6 +491,43 @@ export default function Dashboard() {
     }
   };
 
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newUserName, email: newUserEmail, password: newUserPassword, role: newUserRole }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess('Utilisateur ajouté avec succès !');
+        setShowAddUserModal(false);
+        // Réinitialiser les champs du formulaire
+        setNewUserName('');
+        setNewUserEmail('');
+        setNewUserPassword('');
+        setNewUserRole('apprenant');
+        fetchData(); // Recharger les données pour inclure le nouvel utilisateur
+      } else {
+        throw new Error(data.error || 'Échec de l\'ajout de l\'utilisateur.');
+      }
+    } catch (e) {
+      console.error("Error adding user:", e);
+      setError(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // NOTE: La fonction renderEvaluatorDashboard n'est plus utilisée directement ici, car ses sections sont déplacées.
   // Vous pouvez la supprimer si elle n'est pas utilisée ailleurs.
   // const renderEvaluatorDashboard = () => (
@@ -602,6 +647,11 @@ export default function Dashboard() {
                     Créer un slot de disponibilité
                   </button>
                 )}
+                {(me.role === 'staff' || me.role === 'admin') && (
+                  <button className="btn btn-primary mt-3 me-2" onClick={() => setShowAddUserModal(true)}>
+                    <i className="bi bi-person-plus me-1"></i> Ajouter un Utilisateur
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -624,7 +674,12 @@ export default function Dashboard() {
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
-                  {myCreatedSlots.map(slot => (
+                  {myCreatedSlots.filter(slot => {
+                    const slotEndTime = new Date(slot.endTime);
+                    const oneHourAfterEndTime = new Date(slotEndTime.getTime() + 60 * 60 * 1000); // Ajoute 1 heure en millisecondes
+                    const currentTime = new Date();
+                    return currentTime < oneHourAfterEndTime;
+                  }).map(slot => (
                     <div key={slot._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                       <div>
                         <h5 className="mb-1 text-primary">
@@ -657,21 +712,44 @@ export default function Dashboard() {
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
-                  {mySubmittedEvaluations.map(evaluation => (
-                    <div key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
-                      <div>
-                        <h5 className="mb-1">
-                          <i className="bi bi-journal-text me-2"></i> Projet: {evaluation.project.title}
-                          {evaluation.project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill">En Attente Pairs</span>}
-                          {evaluation.project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill">En Attente Staff</span>}
-                          {evaluation.project.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
-                          {evaluation.project.status === 'rejected' && <span className="badge bg-danger ms-2 rounded-pill">Rejeté</span>}
-                        </h5>
-                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Évaluateur: {evaluation.evaluator.name}</small>
-                        <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date & Heure d'évaluation: {new Date(evaluation.slot.startTime).toLocaleString()}</small>
+                  {mySubmittedEvaluations.length > 0 ? (
+                    Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
+                      const projectId = evaluation.project._id;
+                      if (!acc[projectId]) {
+                        acc[projectId] = {
+                          project: evaluation.project,
+                          evaluators: []
+                        };
+                      }
+                      acc[projectId].evaluators.push(evaluation.evaluator.name);
+                      // Prendre la date de soumission du premier évaluateur, car elle sera la même pour le projet
+                      if (!acc[projectId].submissionDate && evaluation.project.submissionDate) {
+                        acc[projectId].submissionDate = evaluation.project.submissionDate;
+                      }
+                      // Prendre le statut du premier évaluateur, car il sera le même pour le projet
+                      if (!acc[projectId].status) {
+                        acc[projectId].status = evaluation.project.status;
+                      }
+                      return acc;
+                    }, {})).map(projectGroup => (
+                      <div key={projectGroup.project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
+                        <div>
+                          <h5 className="mb-1">
+                            <i className="bi bi-journal-text me-2"></i> Projet: {projectGroup.project.title}
+                            {projectGroup.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill">En Attente Pairs</span>}
+                            {projectGroup.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill">En Attente Staff</span>}
+                            {projectGroup.status === 'approved' && <span className="badge bg-success ms-2 rounded-pill">Approuvé</span>}
+                            {projectGroup.status === 'rejected' && <span className="badge bg-danger ms-2 rounded-pill">Rejeté</span>}
+                          </h5>
+                          <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person-check me-1"></i> Évaluateurs: {projectGroup.evaluators.join(', ')}</small>
+                          {projectGroup.project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></small>}
+                          {projectGroup.submissionDate && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date de soumission: {new Date(projectGroup.submissionDate).toLocaleString()}</small>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-muted py-3">Aucun projet soumis en attente d'évaluation.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -691,7 +769,12 @@ export default function Dashboard() {
               <div className="card-body">
                 <div className="list-group list-group-flush">
                   {myProjects.map(project => (
-                    <div key={project._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
+                    <div
+                      key={project._id}
+                      className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3"
+                      onClick={() => router.push('/projects')}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div>
                         <h5 className="mb-1">
                           <i className="bi bi-folder-open me-2"></i> {project.title}
@@ -723,17 +806,29 @@ export default function Dashboard() {
                 <ul className="list-group list-group-flush">
                   {me.role === 'apprenant' ? (
                     // Affichage pour l'apprenant
-                    upcomingEvaluations.map((evaluation) => {
-                      const evaluationTime = new Date(evaluation.slot.startTime);
+                    upcomingEvaluations.filter(evaluation => {
+                      const evaluationEndTime = new Date(evaluation.slot.endTime);
+                      const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000); // Ajoute 2 heures en millisecondes
+                      const currentTime = new Date();
+                      return currentTime < twoHoursAfterEndTime;
+                    }).map((evaluation) => {
+                      const evaluationStartTime = new Date(evaluation.slot.startTime);
+                      const evaluationEndTime = new Date(evaluation.slot.endTime);
                       const now = new Date();
-                      const isEvaluationActive = now >= evaluationTime;
+
+                      const gracePeriodEnd = new Date(evaluationEndTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
+
+                      const isEvaluationActive = now >= evaluationStartTime && now <= gracePeriodEnd;
+                      const buttonText = isEvaluationActive ? 'Évaluer le projet' :
+                                         now < evaluationStartTime ? `Actif à ${evaluationStartTime.toLocaleTimeString()}` :
+                                         'Évaluation expirée';
 
                       return (
                         <li key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                           <div>
                             <h5 className="mb-1 text-info"><i className="bi bi-calendar-check me-2"></i> Projet: {evaluation.project.title}</h5>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
-                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationTime.toLocaleDateString()} à {evaluationTime.toLocaleTimeString()}</small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationStartTime.toLocaleDateString()} de {evaluationStartTime.toLocaleTimeString()} à {evaluationEndTime.toLocaleTimeString()}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{evaluation.project.repoUrl}</a></small>
                           </div>
@@ -742,16 +837,26 @@ export default function Dashboard() {
                             disabled={!isEvaluationActive}
                             className={`btn btn-sm mt-2 mt-md-0 ${isEvaluationActive ? 'btn-warning' : 'btn-secondary disabled'}`}
                           >
-                            {isEvaluationActive ? 'Évaluer le projet' : `Actif à ${evaluationTime.toLocaleTimeString()}`}
+                            {buttonText}
                           </button>
                         </li>
                       );
                     })
                   ) : (
                     // Affichage pour le staff/admin
-                    allPendingEvaluationsForStaff.length > 0 ? (
+                    allPendingEvaluationsForStaff.filter(evaluation => {
+                      const evaluationEndTime = new Date(evaluation.slot.endTime);
+                      const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000); // Ajoute 2 heures en millisecondes
+                      const currentTime = new Date();
+                      return currentTime < twoHoursAfterEndTime;
+                    }).length > 0 ? (
                       // Regrouper les évaluations par projet
-                      Object.values(allPendingEvaluationsForStaff.reduce((acc, evaluation) => {
+                      Object.values(allPendingEvaluationsForStaff.filter(evaluation => {
+                        const evaluationEndTime = new Date(evaluation.slot.endTime);
+                        const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000);
+                        const currentTime = new Date();
+                        return currentTime < twoHoursAfterEndTime;
+                      }).reduce((acc, evaluation) => {
                         const projectId = evaluation.project._id;
                         if (!acc[projectId]) {
                           acc[projectId] = {
@@ -1279,6 +1384,73 @@ export default function Dashboard() {
         </div>
       )}
       {showDeleteProjectModal && <div className="modal-backdrop fade show"></div>}
+
+      {/* Modale pour l'ajout d'utilisateur (staff/admin) */}
+      {showAddUserModal && (
+        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header bg-gradient bg-primary text-white">
+                <h5 className="modal-title">Ajouter un Utilisateur</h5>
+                <button type="button" className="btn-close" onClick={() => {setShowAddUserModal(false); setNewUserName(''); setNewUserEmail(''); setNewUserPassword(''); setNewUserRole('apprenant');}}></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={handleAddUser}>
+                  <div className="mb-3">
+                    <label htmlFor="newUserName" className="form-label">Nom</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="newUserName"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserEmail" className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      id="newUserEmail"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserPassword" className="form-label">Mot de passe</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      id="newUserPassword"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="newUserRole" className="form-label">Rôle</label>
+                    <select
+                      className="form-select"
+                      id="newUserRole"
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value)}
+                      required
+                    >
+                      <option value="apprenant">Apprenant</option>
+                      <option value="staff">Staff</option>
+                      <option value="admin">Administrateur</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-success">Ajouter l'Utilisateur</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddUserModal && <div className="modal-backdrop fade show"></div>}
 
       {/* Modale pour l'évaluation de projet */}
       {showEvaluationModal && currentEvaluationToSubmit && (

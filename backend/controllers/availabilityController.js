@@ -1,6 +1,6 @@
-import AvailabilitySlot from '../models/AvailabilitySlot.js';
-import User from '../models/User.js';
-import Notification from '../models/Notification.js';
+import AvailabilitySlot from "../models/AvailabilitySlot.js";
+import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 
 // Fonction pour qu'un apprenant (évaluateur) crée des slots de disponibilité
 export async function createAvailabilitySlot(req, res) {
@@ -13,13 +13,15 @@ export async function createAvailabilitySlot(req, res) {
 
     // Validation des dates
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-      return res.status(400).json({ error: 'Dates et heures invalides.' });
+      return res.status(400).json({ error: "Dates et heures invalides." });
     }
 
     // Nouvelle validation : La durée du slot ne doit pas dépasser 2 jours (48 heures)
     const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
-    if ((end.getTime() - start.getTime()) > twoDaysInMs) {
-      return res.status(400).json({ error: 'La durée d\'un slot ne peut pas dépasser 2 jours.' });
+    if (end.getTime() - start.getTime() > twoDaysInMs) {
+      return res
+        .status(400)
+        .json({ error: "La durée d'un slot ne peut pas dépasser 2 jours." });
     }
 
     // Vérifier les contraintes horaires (Lundi-Vendredi, 9h-17h)
@@ -27,11 +29,21 @@ export async function createAvailabilitySlot(req, res) {
     const startHour = start.getUTCHours();
     const endHour = end.getUTCHours();
 
-    if (dayOfWeek === 0 || dayOfWeek === 6) { // Week-end
-      return res.status(400).json({ error: 'Les slots ne peuvent être créés que du lundi au vendredi.' });
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      // Week-end
+      return res.status(400).json({
+        error: "Les slots ne peuvent être créés que du lundi au vendredi.",
+      });
     }
-    if (startHour < 9 || endHour > 17 || (startHour === 17 && start.getUTCMinutes() > 0)) { // 9h-17h
-      return res.status(400).json({ error: 'Les slots doivent être entre 9h00 et 17h00.' });
+    if (
+      startHour < 9 ||
+      endHour > 17 ||
+      (startHour === 17 && start.getUTCMinutes() > 0)
+    ) {
+      // 9h-17h
+      return res
+        .status(400)
+        .json({ error: "Les slots doivent être entre 9h00 et 17h00." });
     }
 
     // Vérifier si un slot existe déjà ou chevauche cette période pour cet évaluateur
@@ -39,12 +51,14 @@ export async function createAvailabilitySlot(req, res) {
       evaluator: evaluatorId,
       $or: [
         { startTime: { $lt: end }, endTime: { $gt: start } }, // Chevauchement
-        { startTime: start, endTime: end } // Identique
-      ]
+        { startTime: start, endTime: end }, // Identique
+      ],
     });
 
     if (overlappingSlot) {
-      return res.status(400).json({ error: 'Un slot de disponibilité chevauche déjà cette période.' });
+      return res.status(400).json({
+        error: "Un slot de disponibilité chevauche déjà cette période.",
+      });
     }
 
     const newSlot = await AvailabilitySlot.create({
@@ -53,10 +67,12 @@ export async function createAvailabilitySlot(req, res) {
       endTime: end,
     });
 
-    res.status(201).json({ message: 'Slot de disponibilité créé avec succès.', slot: newSlot });
-
+    res.status(201).json({
+      message: "Slot de disponibilité créé avec succès.",
+      slot: newSlot,
+    });
   } catch (e) {
-    console.error("Error creating availability slot:", e);
+    console.error('Error creating availability slot:', e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -79,14 +95,14 @@ export async function getAvailableSlots(req, res) {
       query.startTime = { $gte: d, $lt: nextDay };
     }
 
-    console.log("Query for available slots:", query); // Ajout du console.log
+    console.log('Query for available slots:', query); // Ajout du console.log
     const slots = await AvailabilitySlot.find(query)
-      .populate('evaluator', 'name profilePicture') // Populer le nom de l'évaluateur
-      .sort('startTime');
+      .populate("evaluator", "name profilePicture") // Populer le nom de l'évaluateur
+      .sort("startTime");
 
     res.status(200).json(slots);
   } catch (e) {
-    console.error("Error fetching available slots:", e);
+    console.error('Error fetching available slots:', e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -100,12 +116,16 @@ export async function bookSlot(req, res) {
     // Vérifier si le slot existe et est disponible
     const slot = await AvailabilitySlot.findById(slotId);
     if (!slot || slot.isBooked) {
-      return res.status(400).json({ error: 'Slot de disponibilité non trouvé ou déjà réservé.' });
+      return res
+        .status(400)
+        .json({ error: "Slot de disponibilité non trouvé ou déjà réservé." });
     }
 
     // Vérifier que le slot n'est pas réservé par l'évaluateur lui-même
     if (slot.evaluator.equals(studentId)) {
-      return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre slot.' });
+      return res
+        .status(400)
+        .json({ error: "Vous ne pouvez pas réserver votre propre slot." });
     }
 
     // Vérifier que l'apprenant ne réserve pas deux slots pour le même projet avec un décalage insuffisant
@@ -116,10 +136,16 @@ export async function bookSlot(req, res) {
     });
 
     for (const existingBooking of existingBookingsForProject) {
-      const diffMs = Math.abs(new Date(slot.startTime).getTime() - new Date(existingBooking.startTime).getTime());
+      const diffMs = Math.abs(
+        new Date(slot.startTime).getTime() -
+          new Date(existingBooking.startTime).getTime(),
+      );
       const diffMinutes = Math.round(diffMs / 60000);
       if (diffMinutes < 45) {
-        return res.status(400).json({ error: 'Vous devez choisir des slots avec un décalage d\'au moins 45 minutes pour le même projet.' });
+        return res.status(400).json({
+          error:
+            'Vous devez choisir des slots avec un décalage d\'au moins 45 minutes pour le même projet.',
+        });
       }
     }
 
@@ -131,14 +157,13 @@ export async function bookSlot(req, res) {
     // Notifier l'évaluateur que son slot a été réservé
     await Notification.create({
       user: slot.evaluator,
-      type: 'slot_booked',
+      type: "slot_booked",
       message: `Votre slot de disponibilité le ${new Date(slot.startTime).toLocaleString()} a été réservé pour un projet.`, // ${new Date(slot.startTime).toLocaleString()} pour un affichage lisible
     });
 
-    res.status(200).json({ message: 'Slot réservé avec succès.', slot });
-
+    res.status(200).json({ message: "Slot réservé avec succès.", slot });
   } catch (e) {
-    console.error("Error booking slot:", e);
+    console.error('Error booking slot:', e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -148,15 +173,17 @@ export async function getPeerBookings(req, res) {
   try {
     const evaluatorId = req.user._id;
 
-    const bookings = await AvailabilitySlot.find({ evaluator: evaluatorId, isBooked: true })
-      .populate('bookedByStudent', 'name')
-      .populate('bookedForProject', 'title')
-      .sort('startTime');
+    const bookings = await AvailabilitySlot.find({
+      evaluator: evaluatorId,
+      isBooked: true,
+    })
+      .populate("bookedByStudent", "name")
+      .populate("bookedForProject", "title")
+      .sort("startTime");
 
     res.status(200).json(bookings);
-
   } catch (e) {
-    console.error("Error fetching peer bookings:", e);
+    console.error('Error fetching peer bookings:', e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -167,14 +194,13 @@ export async function getMyCreatedSlots(req, res) {
     const evaluatorId = req.user._id;
 
     const slots = await AvailabilitySlot.find({ evaluator: evaluatorId })
-      .populate('bookedByStudent', 'name')
-      .populate('bookedForProject', 'title')
-      .sort('startTime');
+      .populate("bookedByStudent", "name")
+      .populate("bookedForProject", "title")
+      .sort("startTime");
 
     res.status(200).json(slots);
-
   } catch (e) {
-    console.error("Error fetching my created slots:", e);
+    console.error('Error fetching my created slots:', e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -193,20 +219,22 @@ export async function expireUnbookedSlots() {
 
     if (expiredSlots.length > 0) {
       const deleted = await AvailabilitySlot.deleteMany({
-        _id: { $in: expiredSlots.map(slot => slot._id) },
+        _id: { $in: expiredSlots.map((slot) => slot._id) },
       });
-      console.log(`Expired ${deleted.deletedCount} unbooked availability slots.`);
+      console.log(
+        `Expired ${deleted.deletedCount} unbooked availability slots.`,
+      );
 
       // Optionnel: Envoyer une notification aux évaluateurs dont les slots ont expiré
       for (const slot of expiredSlots) {
         await Notification.create({
           user: slot.evaluator,
-          type: 'slot_expired',
-          message: `Votre slot de disponibilité le ${new Date(slot.startTime).toLocaleString()} a expiré car il n'a pas été réservé.`, 
+          type: "slot_expired",
+          message: `Votre slot de disponibilité le ${new Date(slot.startTime).toLocaleString()} a expiré car il n'a pas été réservé.`,
         });
       }
     }
   } catch (e) {
-    console.error("Error expiring unbooked slots:", e);
+    console.error('Error expiring unbooked slots:', e);
   }
 }

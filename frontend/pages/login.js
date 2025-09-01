@@ -61,14 +61,14 @@ export default function Login() {
 
         {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
 
-        <p className="text-center mt-3">
+        {/* <p className="text-center mt-3">
           Pas encore de compte ? <a href="/register" className="text-decoration-none">Créer un compte</a>
-        </p>
+        </p> */}
         <p className="text-center">
           <a href="/forgot-password" className="text-decoration-none">Mot de passe oublié ?</a>
         </p>
 
-        <div className="text-center mt-4">
+        {/* <div className="text-center mt-4">
           <p className="mb-3">Ou se connecter avec :</p>
           <div className="d-grid gap-2">
             <button
@@ -84,7 +84,7 @@ export default function Login() {
               <i className="bi bi-github me-2"></i> Se connecter avec GitHub
             </button>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

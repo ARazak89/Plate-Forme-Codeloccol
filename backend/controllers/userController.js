@@ -20,7 +20,10 @@ export async function me(req, res) {
 
   // Calculer la progression (nombre total de projets, nombre de projets complétés)
   const totalProjects = await Project.countDocuments(); // Ceci devrait être le total des projets DANS LE PARCOURS de l'apprenant
-  const completedProjects = await Project.countDocuments({ student: u._id, status: 'approved' });
+  const completedProjects = await Project.countDocuments({
+    student: u._id,
+    status: 'approved',
+  });
 
   res.json({
     id: u._id,
@@ -44,7 +47,11 @@ export async function me(req, res) {
 export async function unblock(req, res) {
   try {
     const { id } = req.params;
-    const u = await User.findByIdAndUpdate(id, { status: 'active' }, { new: true });
+    const u = await User.findByIdAndUpdate(
+      id,
+      { status: 'active' },
+      { new: true },
+    );
     res.json({ id: u._id, status: u.status });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -56,7 +63,9 @@ export async function updateUserNameAndEmail(req, res) {
     // Cette fonction est désormais réservée aux administrateurs pour modifier le nom et l'email d'un utilisateur.
     // L'utilisateur régulier ne peut pas modifier son propre nom ou email via cet endpoint.
     if (req.user.role !== 'staff' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Non autorisé à modifier le nom ou l\'email de l\'utilisateur.' });
+      return res.status(403).json({
+        error: 'Non autorisé à modifier le nom ou l\'email de l\'utilisateur.',
+      });
     }
 
     const { id } = req.params; // L'ID de l'utilisateur à modifier, passé dans l'URL pour le staff/admin
@@ -65,14 +74,21 @@ export async function updateUserNameAndEmail(req, res) {
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { name, email },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedUser) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    res.json({ message: 'Profil mis à jour avec succès.', user: { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email } });
+    res.json({
+      message: 'Profil mis à jour avec succès.',
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+      },
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -91,7 +107,9 @@ export async function updateUserPassword(req, res) {
     // Vérifier l'ancien mot de passe
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Ancien mot de passe incorrect.' });
+      return res
+        .status(400)
+        .json({ message: 'Ancien mot de passe incorrect.' });
     }
 
     // Hacher le nouveau mot de passe
@@ -110,7 +128,9 @@ export async function updateUserProfilePicture(req, res) {
   try {
     // L'URL de l'image est maintenant générée par Multer après le téléchargement
     if (!req.file) {
-      return res.status(400).json({ message: 'Aucun fichier image n\'a été téléchargé.' });
+      return res
+        .status(400)
+        .json({ message: 'Aucun fichier image n\'a été téléchargé.' });
     }
 
     const userId = req.user._id;
@@ -127,7 +147,10 @@ export async function updateUserProfilePicture(req, res) {
     user.profilePicture = profilePictureUrl;
     await user.save();
 
-    res.status(200).json({ message: 'Photo de profil mise à jour avec succès.', profilePicture: user.profilePicture });
+    res.status(200).json({
+      message: 'Photo de profil mise à jour avec succès.',
+      profilePicture: user.profilePicture,
+    });
   } catch (e) {
     console.error("Error updating profile picture:", e);
     res.status(500).json({ error: e.message });
@@ -144,9 +167,11 @@ export async function listUsers(req, res) {
         select: 'title status', // Sélectionner uniquement le titre et le statut
       });
 
-    const usersWithAssignedProject = users.map(user => {
+    const usersWithAssignedProject = users.map((user) => {
       // Trouver le projet assigné (qui n'est ni 'approved' ni 'rejected')
-      const assignedProject = user.projects.find(p => p.status === 'assigned' || p.status === 'pending');
+      const assignedProject = user.projects.find(
+        (p) => p.status === 'assigned' || p.status === 'pending',
+      );
       return {
         _id: user._id,
         name: user.name,
@@ -154,7 +179,13 @@ export async function listUsers(req, res) {
         role: user.role,
         level: user.level,
         daysRemaining: user.daysRemaining,
-        assignedProject: assignedProject ? { title: assignedProject.title, id: assignedProject._id, status: assignedProject.status } : null,
+        assignedProject: assignedProject
+          ? {
+            title: assignedProject.title,
+            id: assignedProject._id,
+            status: assignedProject.status,
+          }
+          : null,
       };
     });
 
@@ -168,7 +199,8 @@ export async function getUserById(req, res) {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select('-password');
-    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    if (!user)
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     res.status(200).json(user);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -184,13 +216,19 @@ export async function updateUserRole(req, res) {
       return res.status(400).json({ error: 'Rôle invalide.' });
     }
 
-    const user = await User.findByIdAndUpdate(id, { role }, { new: true, runValidators: true }).select('-password');
+    const user = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true, runValidators: true },
+    ).select('-password');
 
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
-    res.status(200).json({ message: 'Rôle utilisateur mis à jour avec succès.', user });
+    res
+      .status(200)
+      .json({ message: 'Rôle utilisateur mis à jour avec succès.', user });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -212,10 +250,58 @@ export async function deleteUser(req, res) {
     await Notification.deleteMany({ user: id });
 
     // Retirer l'utilisateur des listes de participants des hackathons
-    await Hackathon.updateMany({ participants: id }, { $pull: { participants: id } });
+    await Hackathon.updateMany(
+      { participants: id },
+      { $pull: { participants: id } },
+    );
 
-    res.status(200).json({ message: 'Utilisateur et données associées supprimés avec succès.' });
+    res.status(200).json({
+      message: 'Utilisateur et données associées supprimés avec succès.',
+    });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function createUserByAdmin(req, res) {
+  try {
+    const { name, email, password, role } = req.body;
+
+    // Validation simple
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: 'Tous les champs sont obligatoires.' });
+    }
+
+    if (!['apprenant', 'staff', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Rôle invalide.' });
+    }
+
+    // Vérifier si l'utilisateur existe déjà
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Un utilisateur avec cet email existe déjà.' });
+    }
+
+    // Hacher le mot de passe
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Créer le nouvel utilisateur
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      status: 'active', // Les utilisateurs créés par admin sont actifs par défaut
+      level: role === 'apprenant' ? 1 : undefined, // Niveau 1 pour les apprenants par défaut
+      daysRemaining: role === 'apprenant' ? 30 : undefined, // 30 jours pour les apprenants par défaut
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ message: 'Utilisateur créé avec succès.', user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role } });
+  } catch (e) {
+    console.error("Error creating user by admin:", e);
     res.status(500).json({ error: e.message });
   }
 }

@@ -1,5 +1,6 @@
 # Plateforme Codeloccol (MVP)
 
+
 Bienvenue sur la plateforme Codeloccol ! Cette application est une preuve de concept (MVP) conçue pour gérer des projets d'apprentissage, des évaluations et des hackathons.
 
 **Stack Technique:**

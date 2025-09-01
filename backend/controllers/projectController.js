@@ -2,7 +2,10 @@ import Project from '../models/Project.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js'; // Importez le modèle Notification
 import AvailabilitySlot from '../models/AvailabilitySlot.js'; // Importez le modèle AvailabilitySlot
-import { validateGithubUrl, getRepoNameFromUrl } from '../utils/githubService.js'; // Importez getRepoNameFromUrl
+import {
+  validateGithubUrl,
+  getRepoNameFromUrl,
+} from '../utils/githubService.js'; // Importez getRepoNameFromUrl
 import { sendMail } from '../utils/emailService.js'; // Importez la fonction sendMail
 import Evaluation from '../models/Evaluation.js'; // Importez le modèle Evaluation
 import Badge from '../models/Badge.js'; // Importez le modèle Badge
@@ -12,29 +15,40 @@ const DAY_BONUS = { short: 1, medium: 2, long: 3 };
 export async function createProject(req, res) {
   try {
     // Staff creates a project template. student and repoUrl are not required at this stage.
-    const { title, description, demoVideoUrl, specifications, size='short', order } = req.body;
+    const {
+      title,
+      description,
+      demoVideoUrl,
+      specifications,
+      size = 'short',
+      order,
+    } = req.body;
 
     // Basic validation for template creation
     if (!title || !description || !order) {
-      return res.status(400).json({ error: 'Title, description, and order are required for project templates.' });
+      return res.status(400).json({
+        error:
+          'Title, description, and order are required for project templates.',
+      });
     }
 
     // Projects created by staff are initially templates, assigned to no specific student
     // and have a status of 'assigned'.
-    const project = await Project.create({ 
-      title, 
-      description, 
-      demoVideoUrl, 
-      specifications, 
-      size, 
+    const project = await Project.create({
+      title,
+      description,
+      demoVideoUrl,
+      specifications,
+      size,
       status: 'template', // Le statut doit être 'template' pour les modèles de projet
       order, // Inclure l'ordre
       // student: null, // No student assigned initially
       // repoUrl: null, // No repo URL initially
     });
 
-    res.status(201).json({ message: 'Project template created successfully.', project });
-
+    res
+      .status(201)
+      .json({ message: 'Project template created successfully.', project });
   } catch (e) {
     console.error("Error in createProject (staff template creation):", e);
     res.status(500).json({ error: e.message });
@@ -42,7 +56,10 @@ export async function createProject(req, res) {
 }
 
 export async function listMyProjects(req, res) {
-  const projects = await Project.find({ student: req.user._id, status: { $in: ['assigned', 'approved'] } })
+  const projects = await Project.find({
+    student: req.user._id,
+    status: { $in: ['assigned', 'approved'] },
+  })
     .sort({ createdAt: -1 })
     .populate('student', 'name'); // Populer le nom de l'étudiant si besoin pour l'affichage
   res.json(projects);
@@ -53,6 +70,7 @@ export async function listAllProjects(req, res) {
   try {
     const projects = await Project.find({})
       .populate('student', 'name email') // Populer les informations de l'étudiant assigné
+      .populate('templateProject', 'title order') // Populer le projet template
       .sort({ createdAt: -1 });
     res.status(200).json(projects);
   } catch (e) {
@@ -93,12 +111,17 @@ export async function submitProjectSolution(req, res) {
     // Vérifier si le projet existe et est assigné à cet étudiant
     const project = await Project.findOne({ _id: id, student: studentId });
     if (!project) {
-      return res.status(404).json({ error: 'Projet non trouvé ou non assigné à cet étudiant.' });
+      return res
+        .status(404)
+        .json({ error: 'Projet non trouvé ou non assigné à cet étudiant.' });
     }
 
     // S'assurer que le projet n'a pas déjà été soumis/approuvé/rejeté, et qu'il est en statut 'assigned'
     if (project.status !== 'assigned') {
-      return res.status(400).json({ error: 'Ce projet n\'est pas en statut \'assigned\' et ne peut être soumis.' });
+      return res.status(400).json({
+        error:
+          'Ce projet n\'est pas en statut \'assigned\' et ne peut être soumis.',
+      });
     }
 
     // Valider l'URL GitHub
@@ -107,7 +130,12 @@ export async function submitProjectSolution(req, res) {
     }
 
     // *** Logique de validation et de réservation des slots ***
-    const slotsResult = await _validateAndBookSlots(selectedSlotIds, studentId, id, repoUrl);
+    const slotsResult = await _validateAndBookSlots(
+      selectedSlotIds,
+      studentId,
+      id,
+      repoUrl,
+    );
     if (slotsResult.error) {
       return res.status(400).json(slotsResult);
     }
@@ -122,10 +150,19 @@ export async function submitProjectSolution(req, res) {
 
     // Notifier le staff et les évaluateurs choisis et créer les évaluations
     const submittingStudent = await User.findById(studentId); // Récupérer le nom de l'apprenant
-    await _createEvaluationsAndNotifications(id, studentId, project.title, repoUrl, slots, submittingStudent);
+    await _createEvaluationsAndNotifications(
+      id,
+      studentId,
+      project.title,
+      repoUrl,
+      slots,
+      submittingStudent,
+    );
 
-    res.status(200).json({ message: 'Projet soumis avec succès et slots réservés !', project });
-
+    res.status(200).json({
+      message: 'Projet soumis avec succès et slots réservés !',
+      project,
+    });
   } catch (e) {
     console.error("Error in submitProjectSolution:", e);
     res.status(500).json({ error: e.message });
@@ -148,14 +185,19 @@ export async function getGithubRepoTitle(req, res) {
     const repoName = getRepoNameFromUrl(repoUrl);
 
     if (!repoName) {
-      return res.status(400).json({ error: 'Impossible d\'extraire le nom du dépôt de l\'URL.' });
+      return res
+        .status(400)
+        .json({ error: 'Impossible d\'extraire le nom du dépôt de l\'URL.' });
     }
 
     // Dans un cas réel, vous pourriez vouloir appeler l'API GitHub ici
     // pour obtenir le titre exact et d'autres métadonnées.
     // Pour l'instant, nous utilisons simplement le nom du dépôt comme titre.
-    res.status(200).json({ title: repoName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) });
-
+    res.status(200).json({
+      title: repoName
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+    });
   } catch (e) {
     console.error("Error in getGithubRepoTitle:", e);
     res.status(500).json({ error: e.message });
@@ -175,7 +217,7 @@ export async function approveProject(req, res) {
     const student = await User.findById(p.student);
     student.daysRemaining += DAY_BONUS[p.size] || 1;
     student.level = Math.max(student.level, 1) + 1;
-    
+
     // Incrémenter le nombre total de projets complétés
     student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1;
 
@@ -197,26 +239,45 @@ export async function approveProject(req, res) {
 // Fonction d'aide pour attribuer des badges
 async function _handleBadgeAttribution(student) {
   if (student.totalProjectsCompleted === 1) {
-    const firstProjectBadge = await Badge.findOne({ name: 'Premier Projet Validé' });
+    const firstProjectBadge = await Badge.findOne({
+      name: 'Premier Projet Validé',
+    });
     if (firstProjectBadge && !student.badges.includes(firstProjectBadge._id)) {
       student.badges.push(firstProjectBadge._id);
-      await Notification.create({ user: student._id, type: 'badge_earned', message: `Félicitations ! Vous avez gagné le badge \'${firstProjectBadge.name}\'.` });
+      await Notification.create({
+        user: student._id,
+        type: 'badge_earned',
+        message: `Félicitations ! Vous avez gagné le badge \'${firstProjectBadge.name}\'.`,
+      });
     }
   }
 
   if (student.totalProjectsCompleted === 5) {
-    const fiveProjectsBadge = await Badge.findOne({ name: 'Cinq Projets Complétés' });
+    const fiveProjectsBadge = await Badge.findOne({
+      name: 'Cinq Projets Complétés',
+    });
     if (fiveProjectsBadge && !student.badges.includes(fiveProjectsBadge._id)) {
       student.badges.push(fiveProjectsBadge._id);
-      await Notification.create({ user: student._id, type: 'badge_earned', message: `Excellent travail ! Vous avez gagné le badge \'${fiveProjectsBadge.name}\'.` });
+      await Notification.create({
+        user: student._id,
+        type: 'badge_earned',
+        message: `Excellent travail ! Vous avez gagné le badge \'${fiveProjectsBadge.name}\'.`,
+      });
     }
   }
   await student.save(); // Sauvegarder l'étudiant après attribution des badges
 }
 
 // Fonction d'aide pour créer les évaluations et envoyer les notifications
-async function _createEvaluationsAndNotifications(projectId, studentId, projectTitle, repoUrl, slots, submittingStudent) {
-  const evaluatorNames = slots.map(slot => slot.evaluator.name).join(' et ');
+async function _createEvaluationsAndNotifications(
+  projectId,
+  studentId,
+  projectTitle,
+  repoUrl,
+  slots,
+  submittingStudent,
+) {
+  const evaluatorNames = slots.map((slot) => slot.evaluator.name).join(' et ');
 
   for (const slot of slots) {
     await Evaluation.create({
@@ -228,7 +289,9 @@ async function _createEvaluationsAndNotifications(projectId, studentId, projectT
       feedback: {},
     });
 
-    console.log(`Created evaluation for evaluator ${slot.evaluator._id} and project ${projectId}`);
+    console.log(
+      `Created evaluation for evaluator ${slot.evaluator._id} and project ${projectId}`,
+    );
 
     await Notification.create({
       user: slot.evaluator._id,
@@ -248,12 +311,26 @@ async function _createEvaluationsAndNotifications(projectId, studentId, projectT
 }
 
 // Fonction d'aide pour valider et réserver les slots
-async function _validateAndBookSlots(selectedSlotIds, studentId, projectId, repoUrl) { // Supprimer 'res' des paramètres
-  if (!selectedSlotIds || !Array.isArray(selectedSlotIds) || selectedSlotIds.length !== 2) {
-    return { error: 'Vous devez sélectionner exactement deux slots de disponibilité.' };
+async function _validateAndBookSlots(
+  selectedSlotIds,
+  studentId,
+  projectId,
+  repoUrl,
+) {
+  // Supprimer 'res' des paramètres
+  if (
+    !selectedSlotIds ||
+    !Array.isArray(selectedSlotIds) ||
+    selectedSlotIds.length !== 2
+  ) {
+    return {
+      error: 'Vous devez sélectionner exactement deux slots de disponibilité.',
+    };
   }
 
-  const slots = await AvailabilitySlot.find({ _id: { $in: selectedSlotIds } }).populate('evaluator', 'name');
+  const slots = await AvailabilitySlot.find({
+    _id: { $in: selectedSlotIds },
+  }).populate('evaluator', 'name');
 
   if (slots.length !== 2) {
     return { error: 'Certains slots sélectionnés sont introuvables.' };
@@ -261,21 +338,33 @@ async function _validateAndBookSlots(selectedSlotIds, studentId, projectId, repo
 
   for (const slot of slots) {
     if (slot.isBooked) {
-      return { error: `Le slot ${new Date(slot.startTime).toLocaleString()} est déjà réservé.` };
+      return {
+        error: `Le slot ${new Date(slot.startTime).toLocaleString()} est déjà réservé.`,
+      };
     }
     if (slot.evaluator._id.equals(studentId)) {
-      return { error: 'Vous ne pouvez pas choisir votre propre slot de disponibilité.' };
+      return {
+        error: 'Vous ne pouvez pas choisir votre propre slot de disponibilité.',
+      };
     }
   }
 
   if (slots[0].evaluator._id.equals(slots[1].evaluator._id)) {
-    return { error: 'Vous devez choisir des slots de deux évaluateurs différents.' };
+    return {
+      error: 'Vous devez choisir des slots de deux évaluateurs différents.',
+    };
   }
 
-  const diffMs = Math.abs(new Date(slots[0].startTime).getTime() - new Date(slots[1].startTime).getTime());
+  const diffMs = Math.abs(
+    new Date(slots[0].startTime).getTime() -
+      new Date(slots[1].startTime).getTime(),
+  );
   const diffMinutes = Math.round(diffMs / 60000);
   if (diffMinutes < 45) {
-    return { error: 'Les slots choisis doivent avoir un décalage d\'au moins 45 minutes.' };
+    return {
+      error:
+        'Les slots choisis doivent avoir un décalage d\'au moins 45 minutes.',
+    };
   }
 
   for (const slot of slots) {
@@ -292,7 +381,7 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
   if (currentProjectTemplate && currentProjectTemplate.order) {
     const nextProjectTemplate = await Project.findOne({
       status: 'template',
-      order: currentProjectTemplate.order + 1
+      order: currentProjectTemplate.order + 1,
     });
 
     if (nextProjectTemplate) {
@@ -313,11 +402,15 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
       await Notification.create({
         user: student._id,
         type: 'project_assigned',
-        message: `Un nouveau projet, \'${assignedNextProject.title}\', vous a été assigné après l'approbation de votre précédent projet.`, 
+        message: `Un nouveau projet, \'${assignedNextProject.title}\', vous a été assigné après l'approbation de votre précédent projet.`,
       });
-      console.log(`Assigned next project \'${assignedNextProject.title}\' to ${student.name}.`);
+      console.log(
+        `Assigned next project \'${assignedNextProject.title}\' to ${student.name}.`,
+      );
     } else {
-      console.log(`No next project template found to assign to ${student.name}.`);
+      console.log(
+        `No next project template found to assign to ${student.name}.`,
+      );
     }
   }
 }
@@ -325,7 +418,11 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
 export async function rejectProject(req, res) {
   try {
     const { id } = req.params;
-    const p = await Project.findByIdAndUpdate(id, { status: 'rejected' }, { new: true });
+    const p = await Project.findByIdAndUpdate(
+      id,
+      { status: 'rejected' },
+      { new: true },
+    );
     res.json(p);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -343,17 +440,27 @@ export async function submitPeerEvaluation(req, res) {
     if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
 
     // Vérifier si l'utilisateur est un évaluateur désigné pour ce projet
-    const isPeerEvaluator = project.peerEvaluators.some(peer => peer.equals(evaluatorId));
-    const isStaffOrAdmin = req.user.role === 'staff' || req.user.role === 'admin';
+    const isPeerEvaluator = project.peerEvaluators.some((peer) =>
+      peer.equals(evaluatorId),
+    );
+    const isStaffOrAdmin =
+      req.user.role === 'staff' || req.user.role === 'admin';
 
     if (!isPeerEvaluator && !isStaffOrAdmin) {
-      return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à évaluer ce projet.' });
+      return res
+        .status(403)
+        .json({ error: 'Vous n\'êtes pas autorisé à évaluer ce projet.' });
     }
 
     // Vérifier si l'évaluateur a déjà soumis une évaluation pour ce projet
-    const existingEvaluation = await Evaluation.findOne({ project: id, evaluator: evaluatorId });
+    const existingEvaluation = await Evaluation.findOne({
+      project: id,
+      evaluator: evaluatorId,
+    });
     if (existingEvaluation) {
-      return res.status(400).json({ error: 'Vous avez déjà soumis une évaluation pour ce projet.' });
+      return res.status(400).json({
+        error: 'Vous avez déjà soumis une évaluation pour ce projet.',
+      });
     }
 
     // Créer la nouvelle évaluation
@@ -364,8 +471,9 @@ export async function submitPeerEvaluation(req, res) {
       comments,
     });
 
-    res.status(201).json({ message: 'Évaluation soumise avec succès.', evaluation });
-
+    res
+      .status(201)
+      .json({ message: 'Évaluation soumise avec succès.', evaluation });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -380,16 +488,24 @@ export async function updateProject(req, res) {
     if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
-    if (!project.student || (!project.student.equals(req.user._id) && req.user.role !== 'staff' && req.user.role !== 'admin')) {
-      return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet.' });
+    if (
+      !project.student ||
+      (!project.student.equals(req.user._id) &&
+        req.user.role !== 'staff' &&
+        req.user.role !== 'admin')
+    ) {
+      return res
+        .status(403)
+        .json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet.' });
     }
 
-    if (repoUrl && !validateGithubUrl(repoUrl)) return res.status(400).json({ error: 'URL GitHub invalide' });
+    if (repoUrl && !validateGithubUrl(repoUrl))
+      return res.status(400).json({ error: 'URL GitHub invalide' });
 
     const updatedProject = await Project.findByIdAndUpdate(
       id,
       { title, description, repoUrl, size, peerEvaluators },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     res.json(updatedProject);
@@ -406,8 +522,15 @@ export async function deleteProject(req, res) {
     if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
-    if (!project.student || (!project.student.equals(req.user._id) && req.user.role !== 'staff' && req.user.role !== 'admin')) {
-      return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet.' });
+    if (
+      !project.student ||
+      (!project.student.equals(req.user._id) &&
+        req.user.role !== 'staff' &&
+        req.user.role !== 'admin')
+    ) {
+      return res
+        .status(403)
+        .json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet.' });
     }
 
     await Project.findByIdAndDelete(id);
@@ -426,13 +549,17 @@ export async function assignProjectToStudent(req, res) {
     // Vérifier si le projet template existe et qu'il a le statut 'assigned'
     const projectTemplate = await Project.findById(projectId);
     if (!projectTemplate || projectTemplate.status !== 'assigned') {
-      return res.status(404).json({ error: 'Project template not found or not assignable.' });
+      return res
+        .status(404)
+        .json({ error: 'Project template not found or not assignable.' });
     }
 
     // Vérifier si l'étudiant existe
     const student = await User.findById(studentId);
     if (!student || student.role !== 'apprenant') {
-      return res.status(404).json({ error: 'Student not found or not an apprenant.' });
+      return res
+        .status(404)
+        .json({ error: 'Student not found or not an apprenant.' });
     }
 
     // Créer une copie du projet template pour l'étudiant
@@ -459,8 +586,10 @@ export async function assignProjectToStudent(req, res) {
       message: `Un nouveau projet, \'${assignedProject.title}\', vous a été assigné.`, // Notez les backticks ` ` pour les template literals
     });
 
-    res.status(201).json({ message: 'Project assigned successfully.', project: assignedProject });
-
+    res.status(201).json({
+      message: 'Project assigned successfully.',
+      project: assignedProject,
+    });
   } catch (e) {
     console.error("Error in assignProjectToStudent:", e);
     res.status(500).json({ error: e.message });
@@ -476,10 +605,15 @@ export async function submitFinalStaffEvaluation(req, res) {
 
     // Vérifier que l'utilisateur est un membre du personnel
     if (req.user.role !== 'staff' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Non autorisé à effectuer cette évaluation finale.' });
+      return res
+        .status(403)
+        .json({ error: 'Non autorisé à effectuer cette évaluation finale.' });
     }
 
-    const project = await Project.findById(id).populate('student', 'name email');
+    const project = await Project.findById(id).populate(
+      'student',
+      'name email',
+    );
 
     if (!project) {
       return res.status(404).json({ error: 'Projet non trouvé.' });
@@ -487,12 +621,17 @@ export async function submitFinalStaffEvaluation(req, res) {
 
     // Le projet doit être en attente de l'évaluation du personnel
     if (project.status !== 'awaiting_staff_review') {
-      return res.status(400).json({ error: 'Ce projet n\'est pas en attente d\'évaluation finale du personnel.' });
+      return res.status(400).json({
+        error:
+          'Ce projet n\'est pas en attente d\'évaluation finale du personnel.',
+      });
     }
 
     // Valider le statut
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Statut d\'évaluation finale invalide.' });
+      return res
+        .status(400)
+        .json({ error: 'Statut d\'évaluation finale invalide.' });
     }
 
     project.status = status;
@@ -505,31 +644,37 @@ export async function submitFinalStaffEvaluation(req, res) {
       if (student) {
         student.daysRemaining += DAY_BONUS[project.size] || 1;
         student.level = Math.max(student.level, 1) + 1;
-        student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1;
-        
+        student.totalProjectsCompleted =
+          (student.totalProjectsCompleted || 0) + 1;
+
         await _handleBadgeAttribution(student); // Appeler la fonction d'aide
 
         // Logique pour assigner le projet suivant
-        const currentProjectTemplate = await Project.findById(project.templateProject);
+        const currentProjectTemplate = await Project.findById(
+          project.templateProject,
+        );
         await _assignNextProjectToStudent(student, currentProjectTemplate);
 
         await student.save();
       }
-    } else if (status === 'rejected') { // Logique si le projet est rejeté
+    } else if (status === 'rejected') {
+      // Logique si le projet est rejeté
       const student = await User.findById(project.student._id);
       if (student) {
         project.status = 'assigned'; // Remettre le statut à 'assigned' pour que l'apprenant puisse resoumettre
         project.repoUrl = undefined; // Effacer l'URL du dépôt
         project.submissionDate = undefined; // Effacer la date de soumission
         await project.save();
-        
+
         // Notifier l'apprenant du rejet et de la réassignation
         await Notification.create({
           user: student._id,
           type: 'project_rejected_reassigned',
-          message: `Votre projet \'${project.title}\' a été rejeté par le personnel. Il vous a été réassigné pour que vous puissiez le retravailler et le soumettre à nouveau.`, 
+          message: `Votre projet \'${project.title}\' a été rejeté par le personnel. Il vous a été réassigné pour que vous puissiez le retravailler et le soumettre à nouveau.`,
         });
-        console.log(`Project \'${project.title}\' rejected and reassigned to ${student.name}.`);
+        console.log(
+          `Project \'${project.title}\' rejected and reassigned to ${student.name}.`,
+        );
       }
     }
 
@@ -540,8 +685,10 @@ export async function submitFinalStaffEvaluation(req, res) {
       message: `Le statut final de votre projet \'${project.title}\' est maintenant : ${status === 'approved' ? 'Approuvé' : 'Rejeté'}.`,
     });
 
-    res.status(200).json({ message: `Projet ${status === 'approved' ? 'approuvé' : 'rejeté'} par le personnel avec succès.`, project });
-
+    res.status(200).json({
+      message: `Projet ${status === 'approved' ? 'approuvé' : 'rejeté'} par le personnel avec succès.`,
+      project,
+    });
   } catch (e) {
     console.error("Error in submitFinalStaffEvaluation:", e);
     res.status(500).json({ error: e.message });
@@ -553,7 +700,9 @@ export async function getProjectsAwaitingStaffReview(req, res) {
   try {
     // Seuls le staff et les administrateurs peuvent voir cette liste
     if (req.user.role !== 'staff' && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Non autorisé à consulter cette ressource.' });
+      return res
+        .status(403)
+        .json({ error: 'Non autorisé à consulter cette ressource.' });
     }
 
     const projects = await Project.find({ status: 'awaiting_staff_review' })
@@ -562,9 +711,12 @@ export async function getProjectsAwaitingStaffReview(req, res) {
       .sort({ submissionDate: 1 }); // Trier par date de soumission pour les plus anciens en premier
 
     res.status(200).json(projects);
-
   } catch (e) {
     console.error("Error in getProjectsAwaitingStaffReview:", e); // Log the full error object
-    res.status(500).json({ error: "Une erreur interne du serveur s'est produite lors de la récupération des projets en attente de révision.", details: e.message }); // Provide more detail
+    res.status(500).json({
+      error:
+        'Une erreur interne du serveur s\'est produite lors de la récupération des projets en attente de révision.',
+      details: e.message,
+    }); // Provide more detail
   }
 }
