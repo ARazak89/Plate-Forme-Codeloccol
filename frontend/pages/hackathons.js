@@ -29,7 +29,7 @@ export default function Hackathons() {
       return;
     }
     try {
-      const r = await fetch(`${API}/hackathons`, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API}/api/hackathons`, { headers: { Authorization: `Bearer ${token}` } });
       if (!r.ok) throw new Error('Failed to fetch hackathons');
       setList(await r.json());
     } catch (e) {
@@ -40,7 +40,7 @@ export default function Hackathons() {
   const loadHackathonTeams = async (hackathonId) => {
     if (!token || !hackathonId) return;
     try {
-      const r = await fetch(`${API}/teams/hackathon/${hackathonId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API}/api/teams/hackathon/${hackathonId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!r.ok) throw new Error('Failed to fetch hackathon teams');
       setCurrentHackathonTeams(await r.json());
     } catch (e) {
@@ -78,7 +78,7 @@ export default function Hackathons() {
       if (selectedMembers.length < 3 || selectedMembers.length > 5) {
         throw new Error('Une équipe doit avoir entre 3 et 5 membres.');
       }
-      const r = await fetch(`${API}/teams`, {
+      const r = await fetch(`${API}/api/teams`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export default function Hackathons() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette équipe ?')) return;
     setError(null);
     try {
-      const r = await fetch(`${API}/teams/${teamId}`, {
+      const r = await fetch(`${API}/api/teams/${teamId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -122,7 +122,7 @@ export default function Hackathons() {
   const handleAddMember = async (teamId, memberId) => {
     setError(null);
     try {
-      const r = await fetch(`${API}/teams/${teamId}/add-member`, {
+      const r = await fetch(`${API}/api/teams/${teamId}/add-member`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export default function Hackathons() {
     if (!confirm('Êtes-vous sûr de vouloir retirer ce membre de l\'équipe ?')) return;
     setError(null);
     try {
-      const r = await fetch(`${API}/teams/${teamId}/remove-member`, {
+      const r = await fetch(`${API}/api/teams/${teamId}/remove-member`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ export default function Hackathons() {
     e.preventDefault();
     setError(null);
     try {
-      const r = await fetch(`${API}/hackathons`, {
+      const r = await fetch(`${API}/api/hackathons`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,13 +204,13 @@ export default function Hackathons() {
       loadHackathons();
       const loadUserData = async () => {
         try {
-          const userRes = await fetch(`${API}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+          const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
           if (!userRes.ok) throw new Error('Failed to fetch user data');
           const userData = await userRes.json();
           setMe(userData);
 
           if (userData.role === 'staff' || userData.role === 'admin') {
-            const learnersRes = await fetch(`${API}/users?role=apprenant`, { headers: { Authorization: `Bearer ${token}` } });
+            const learnersRes = await fetch(`${API}/api/users?role=apprenant`, { headers: { Authorization: `Bearer ${token}` } });
             if (!learnersRes.ok) throw new Error('Failed to fetch learners');
             setLearners(await learnersRes.json());
           }
@@ -228,7 +228,7 @@ export default function Hackathons() {
   if (!token) return null; // La redirection est gérée par useEffect
 
   return (
-    <div>
+    <div className="container-fluid mt-4 pt-5 px-4">
       <h1 className="mb-4">Hackathons</h1>
 
       {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
@@ -353,9 +353,9 @@ export default function Hackathons() {
                               <button 
                                 className="btn btn-sm btn-outline-danger mt-2 mt-md-0"
                                 onClick={() => handleDeleteTeam(team._id)}
-                                title="Supprimer l'équipe"
+                                title="Supprimer l\'équipe"
                               >
-                                <i className="bi bi-trash"></i> Supprimer l'équipe
+                                <i className="bi bi-trash"></i> Supprimer l\'équipe
                               </button>
                             </li>
                           ))}
@@ -373,7 +373,7 @@ export default function Hackathons() {
                         <h5>Nouvelle Équipe pour {selectedHackathon.title}</h5>
                         <form onSubmit={handleCreateTeam}>
                           <div className="mb-3">
-                            <label htmlFor="teamName" className="form-label">Nom de l'équipe</label>
+                            <label htmlFor="teamName" className="form-label">Nom de l\'équipe</label>
                             <input 
                               type="text" 
                               className="form-control" 

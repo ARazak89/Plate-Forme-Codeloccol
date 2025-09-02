@@ -25,7 +25,7 @@ export default function Profile() {
     }
     const fetchUserProfile = async () => {
       try {
-        const res = await fetch(`${API}/users/me`, {
+        const res = await fetch(`${API}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Failed to fetch user profile.');
@@ -54,7 +54,7 @@ export default function Profile() {
     }
 
     try {
-      const res = await fetch(`${API}/users/me/password`, {
+      const res = await fetch(`${API}/api/users/me/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ oldPassword, newPassword }),
@@ -92,7 +92,7 @@ export default function Profile() {
     formData.append('profilePicture', selectedFile); // 'profilePicture' doit correspondre au nom du champ dans Multer
 
     try {
-      const res = await fetch(`${API}/users/me/profile-picture`, {
+      const res = await fetch(`${API}/api/users/me/profile-picture`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` }, // Pas de Content-Type ici, FormData le gère
         body: formData,
@@ -122,7 +122,7 @@ export default function Profile() {
   );
 
   return (
-    <div className="container mt-4 pt-5">
+    <div className="container-fluid mt-4 pt-5 px-4">
       <h1 className="mb-4">Mon Profil</h1>
 
       {success && <div className="alert alert-success mt-3" role="alert">{success}</div>}
@@ -137,7 +137,7 @@ export default function Profile() {
           <div className="row align-items-center mb-4">
             <div className="col-md-auto text-center mb-3 mb-md-0">
               <img
-                src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.png'}
+                src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.jpg'}
                 alt="Photo de profil"
                 className="rounded-circle border border-4 border-primary shadow-sm"
                 style={{ width: '120px', height: '120px', objectFit: 'cover' }}

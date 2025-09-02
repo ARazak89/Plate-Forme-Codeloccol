@@ -410,7 +410,7 @@ function ProjectsPage() {
   if (error) return <div className="alert alert-danger text-center mt-5">Error loading projects: {error}</div>;
 
   return (
-    <div className="container mt-4 pt-5">
+    <div className="container-fluid mt-4 pt-5 px-4">
       <h1 className="mb-4">{me && (me.role === 'staff' || me.role === 'admin') ? 'Gestion des Projets' : 'Mes Projets'}</h1>
       {error && <div className="alert alert-danger text-center mt-5">Error: {error}</div>}
 
