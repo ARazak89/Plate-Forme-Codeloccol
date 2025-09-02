@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const projectSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
+    objectives: [{ type: String }], // Nouveau champ pour les objectifs (tableau de chaînes)
     description: String,
     repoUrl: { type: String, required: false }, // repoUrl devient optionnel pour les projets templates
     demoVideoUrl: String, // Nouvelle URL pour la vidéo de démonstration

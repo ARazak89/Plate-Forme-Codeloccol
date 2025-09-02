@@ -29,6 +29,7 @@ function ProjectsPage() {
   const [projectSize, setProjectSize] = useState('short');
   const [projectExerciseStatements, setProjectExerciseStatements] = useState(''); // Nouvel état pour les énoncés d'exercice
   const [projectResourceLinks, setProjectResourceLinks] = useState(''); // Nouvel état pour les liens de ressources
+  const [projectObjectives, setProjectObjectives] = useState(''); // Nouvel état pour les objectifs
   
   // États pour la soumission de projet par un apprenant
   const [showSubmitProjectModal, setShowSubmitProjectModal] = useState(false);
@@ -201,6 +202,7 @@ function ProjectsPage() {
         setProjectSize('short');
         setProjectExerciseStatements(''); // Réinitialiser
         setProjectResourceLinks(''); // Réinitialiser
+        setProjectObjectives(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de l\'ajout du projet.');
@@ -223,6 +225,7 @@ function ProjectsPage() {
     setProjectSize(project.size || 'short');
     setProjectExerciseStatements(project.exerciseStatements ? project.exerciseStatements.join('\n') : ''); // Joindre pour l'édition
     setProjectResourceLinks(project.resourceLinks ? project.resourceLinks.join('\n') : ''); // Joindre pour l'édition
+    setProjectObjectives(project.objectives ? project.objectives.join('\n') : ''); // Joindre pour l'édition
     setShowEditProjectModal(true);
   };
 
@@ -250,7 +253,8 @@ function ProjectsPage() {
           specifications: projectSpecifications, 
           size: projectSize, 
           exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== ''), 
-          resourceLinks: projectResourceLinks.split('\n').filter(s => s.trim() !== '') // Inclure les liens de ressources
+          resourceLinks: projectResourceLinks.split('\n').filter(s => s.trim() !== ''), 
+          objectives: projectObjectives.split('\n').filter(s => s.trim() !== '') // Inclure les objectifs
         }),
       });
       const data = await res.json();
@@ -267,6 +271,7 @@ function ProjectsPage() {
         setProjectSize('short');
         setProjectExerciseStatements(''); // Réinitialiser
         setProjectResourceLinks(''); // Réinitialiser
+        setProjectObjectives(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
@@ -628,6 +633,21 @@ function ProjectsPage() {
                 <div className="row">
                   <div className="col-md-8">
                     <h6 className="text-primary mb-3">Informations du Projet</h6>
+                    
+                    {/* Objectives */}
+                    {selectedProject.objectives && selectedProject.objectives.length > 0 && (
+                      <div className="mb-3">
+                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
+                        <ul className="list-group list-group-flush border-top pt-2">
+                          {selectedProject.objectives.map((objective, index) => (
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <p className="d-flex align-items-center"><i className="bi bi-journal-text me-2 text-muted"></i><strong>Description:</strong> {selectedProject.description}</p>
                     {selectedProject.specifications && <p className="d-flex align-items-center"><i className="bi bi-file-earmark-text me-2 text-muted"></i><strong>Spécifications:</strong> {selectedProject.specifications}</p>}
                     
@@ -649,6 +669,35 @@ function ProjectsPage() {
                         minute: '2-digit'
                       })}</p>
                     )}
+
+                    {/* Resource Links */}
+                    {selectedProject.resourceLinks && selectedProject.resourceLinks.length > 0 && (
+                      <div className="mt-3">
+                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
+                        <ul className="list-group list-group-flush border-top pt-2">
+                          {selectedProject.resourceLinks.map((link, index) => (
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
+                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {selectedProject.exerciseStatements && selectedProject.exerciseStatements.length > 0 && (
+                      <div className="mt-3">
+                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
+                        <ul className="list-group list-group-flush border-top pt-2">
+                          {selectedProject.exerciseStatements.map((statement, index) => (
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                   </div>
                   
                   <div className="col-md-4">
@@ -723,6 +772,7 @@ function ProjectsPage() {
               <div className="modal-body">
                 {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
                 <form onSubmit={currentProjectToEdit ? handleUpdateProject : handleAddProject}>
+                  {/* Titre */}
                   <div className="mb-3">
                     <label htmlFor="projectTitle" className="form-label">Titre du Projet <span className="text-danger">*</span></label>
                     <input
@@ -734,6 +784,22 @@ function ProjectsPage() {
                       required
                     />
                   </div>
+
+                  {/* Objectifs */}
+                  <div className="mb-3">
+                    <label htmlFor="projectObjectives" className="form-label">Objectifs (un par ligne, Optionnel)</label>
+                    <textarea
+                      className="form-control"
+                      id="projectObjectives"
+                      rows="3"
+                      value={projectObjectives}
+                      onChange={(e) => setProjectObjectives(e.target.value)}
+                      placeholder="Entrez chaque objectif sur une nouvelle ligne"
+                    ></textarea>
+                    <div className="form-text text-muted">Décrivez les principaux objectifs que l'apprenant doit atteindre.</div>
+                  </div>
+
+                  {/* Description */}
                   <div className="mb-3">
                     <label htmlFor="projectDescription" className="form-label">Description <span className="text-danger">*</span></label>
                     <textarea
@@ -745,6 +811,34 @@ function ProjectsPage() {
                       required
                     ></textarea>
                   </div>
+                  
+                  {/* Spécifications */}
+                  <div className="mb-3">
+                    <label htmlFor="projectSpecifications" className="form-label">Spécifications (Optionnel)</label>
+                    <textarea
+                      className="form-control"
+                      id="projectSpecifications"
+                      rows="3"
+                      value={projectSpecifications}
+                      onChange={(e) => setProjectSpecifications(e.target.value)}
+                    ></textarea>
+                  </div>
+
+                  {/* Liens de Ressources */}
+                  <div className="mb-3">
+                    <label htmlFor="projectResourceLinks" className="form-label">Liens de Ressources (un par ligne, Optionnel)</label>
+                    <textarea
+                      className="form-control"
+                      id="projectResourceLinks"
+                      rows="3"
+                      value={projectResourceLinks}
+                      onChange={(e) => setProjectResourceLinks(e.target.value)}
+                      placeholder="Entrez chaque lien de ressource sur une nouvelle ligne (ex: https://example.com/doc.pdf)"
+                    ></textarea>
+                    <div className="form-text text-muted">Fournissez des liens vers des documentations, tutoriels, ou autres ressources utiles.</div>
+                  </div>
+
+                  {/* URL Vidéo de Démonstration (Optionnel) */}
                   <div className="mb-3">
                     <label htmlFor="projectDemoVideoUrl" className="form-label">URL Vidéo de Démonstration (Optionnel)</label>
                     <input
@@ -756,31 +850,7 @@ function ProjectsPage() {
                       placeholder="https://www.youtube.com/watch?v=exemple"
                     />
                   </div>
-                  <div className="mb-3">
-                    <label htmlFor="projectSpecifications" className="form-label">Spécifications (Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectSpecifications"
-                      rows="3"
-                      value={projectSpecifications}
-                      onChange={(e) => setProjectSpecifications(e.target.value)}
-                    ></textarea>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="projectSize" className="form-label">Taille du Projet <span className="text-danger">*</span></label>
-                    <select
-                      className="form-select"
-                      id="projectSize"
-                      value={projectSize}
-                      onChange={(e) => setProjectSize(e.target.value)}
-                      required
-                    >
-                      <option value="short">Court (1 jour)</option>
-                      <option value="medium">Moyen (2 jours)</option>
-                      <option value="long">Long (3 jours)</option>
-                    </select>
-                  </div>
-                  
+
                   {/* Champ pour les énoncés d'exercice (conditionnel) */}
                   { (showAddProjectModal || (currentProjectToEdit && (currentProjectToEdit.title === "CLI (Command Line Interface)" || currentProjectToEdit.title === "Pratique guidée Git / GitHub"))) && (
                     <div className="mb-3">
@@ -797,18 +867,20 @@ function ProjectsPage() {
                     </div>
                   )}
 
-                  {/* Champ pour les liens de ressources */}
+                  {/* Taille du Projet */}
                   <div className="mb-3">
-                    <label htmlFor="projectResourceLinks" className="form-label">Liens de Ressources (un par ligne, Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectResourceLinks"
-                      rows="3"
-                      value={projectResourceLinks}
-                      onChange={(e) => setProjectResourceLinks(e.target.value)}
-                      placeholder="Entrez chaque lien de ressource sur une nouvelle ligne (ex: https://example.com/doc.pdf)"
-                    ></textarea>
-                    <div className="form-text text-muted">Fournissez des liens vers des documentations, tutoriels, ou autres ressources utiles.</div>
+                    <label htmlFor="projectSize" className="form-label">Taille du Projet <span className="text-danger">*</span></label>
+                    <select
+                      className="form-select"
+                      id="projectSize"
+                      value={projectSize}
+                      onChange={(e) => setProjectSize(e.target.value)}
+                      required
+                    >
+                      <option value="short">Court (1 jour)</option>
+                      <option value="medium">Moyen (2 jours)</option>
+                      <option value="long">Long (3 jours)</option>
+                    </select>
                   </div>
 
                   <button type="submit" className="btn btn-success mt-3">{currentProjectToEdit ? 'Modifier' : 'Ajouter'} le Projet</button>
@@ -876,9 +948,36 @@ function ProjectsPage() {
 
                 <div className="mb-4 p-3 bg-light border rounded">
                   <h6 className="text-primary d-flex align-items-center mb-3"><i className="bi bi-info-circle me-2"></i> Informations du Projet</h6>
+                  
+                  {currentProjectToSubmit.objectives && currentProjectToSubmit.objectives.length > 0 && (
+                    <div className="mb-3">
+                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
+                      <ul className="list-group list-group-flush border-top pt-2">
+                        {currentProjectToSubmit.objectives.map((objective, index) => (
+                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                            <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="d-flex align-items-center mb-1"><strong>Description:</strong> {currentProjectToSubmit.description}</p>
                   {currentProjectToSubmit.specifications && (
                     <p className="d-flex align-items-center mb-1"><strong>Spécifications:</strong> {currentProjectToSubmit.specifications}</p>
+                  )}
+                  {currentProjectToSubmit.resourceLinks && currentProjectToSubmit.resourceLinks.length > 0 && (
+                    <div className="mt-3">
+                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
+                      <ul className="list-group list-group-flush border-top pt-2">
+                        {currentProjectToSubmit.resourceLinks.map((link, index) => (
+                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                            <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
+                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                   {currentProjectToSubmit.demoVideoUrl && (
                     <p className="d-flex align-items-center mb-1"><i className="bi bi-camera-video me-2 text-muted"></i><a href={currentProjectToSubmit.demoVideoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">Vidéo de Démonstration</a></p>
@@ -890,19 +989,6 @@ function ProjectsPage() {
                         {currentProjectToSubmit.exerciseStatements.map((statement, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {currentProjectToSubmit.resourceLinks && currentProjectToSubmit.resourceLinks.length > 0 && (
-                    <div className="mt-3">
-                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
-                      <ul className="list-group list-group-flush border-top pt-2">
-                        {currentProjectToSubmit.resourceLinks.map((link, index) => (
-                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                            <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
-                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
                           </li>
                         ))}
                       </ul>
