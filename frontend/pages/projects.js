@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { getAuthToken } from '../utils/auth';
 import React from 'react'; // Added for React.Fragment
@@ -42,6 +42,103 @@ function ProjectsPage() {
   
   const router = useRouter();
 
+  const loadData = useCallback(async (token) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Charger les informations de l'utilisateur
+      const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!userRes.ok) {
+        const errorData = await userRes.json();
+        throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
+      }
+      const userData = await userRes.json();
+      setMe(userData);
+
+      // Chargement conditionnel des projets
+      let projectsToSet = [];
+      if (userData.role === 'staff' || userData.role === 'admin') {
+        // Pour staff/admin: charger tous les projets
+        const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!allProjectsRes.ok) {
+          const errorData = await allProjectsRes.json();
+          throw new Error(errorData.error || 'Échec du chargement de tous les projets.');
+        }
+        const rawProjects = await allProjectsRes.json();
+        // Dédupliquer les projets par _id
+        const uniqueProjects = Array.from(new Map(rawProjects.map(project => [project._id, project])).values());
+        // Sépare les projets templates des projets assignés
+        const projectTemplates = uniqueProjects.filter(p => p.status === 'template');
+        const studentProjects = uniqueProjects.filter(p => p.status !== 'template');
+
+        // Regrouper les projets d'apprenants par leur templateProject
+        const groupedProjects = projectTemplates.map(template => ({
+          ...template,
+          assignedProjects: studentProjects.filter(p => p.templateProject && p.templateProject._id === template._id)
+        }));
+        
+        // Si des projets d'apprenants n'ont pas de template (ce qui ne devrait pas arriver avec la logique actuelle, mais au cas où)
+        const projectsWithoutTemplate = studentProjects.filter(p => !p.templateProject);
+        
+        setAllProjects(groupedProjects);
+        setProjects(projectsWithoutTemplate); // Pourrait être utilisé pour afficher des projets non liés à un template
+      } else {
+        // Pour apprenant: charger leurs projets
+        const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!myProjectsRes.ok) {
+          const errorData = await myProjectsRes.json();
+          throw new Error(errorData.error || 'Échec du chargement de mes projets.');
+        }
+        const rawProjects = await myProjectsRes.json();
+        console.log('Projets bruts reçus:', rawProjects);
+        
+        // Dédupliquer les projets par templateProject._id en gardant le statut le plus avancé
+        // quand un projet passe de assigned à pending puis approved
+        const projectMap = new Map();
+        
+        rawProjects.forEach(project => {
+          const key = project.templateProject ? project.templateProject._id || project.templateProject : project._id;
+          const existingProject = projectMap.get(key);
+          
+          if (!existingProject) {
+            projectMap.set(key, project);
+          } else {
+            // Garder le projet avec le statut le plus avancé
+            const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
+            const existingStatus = statusOrder[existingProject.status] || 0;
+            const newStatus = statusOrder[project.status] || 0;
+            
+            if (newStatus > existingStatus) {
+              projectMap.set(key, project);
+            }
+          }
+        });
+        
+        const uniqueProjects = Array.from(projectMap.values());
+        console.log('Projets uniques après déduplication:', uniqueProjects);
+        
+        // Trier par ordre du templateProject, puis par statut (assigned en premier, puis pending, puis approved)
+        projectsToSet = uniqueProjects.sort((a, b) => {
+          // D'abord par ordre du template
+          const orderA = a.templateProject ? (a.templateProject.order || 0) : 0;
+          const orderB = b.templateProject ? (b.templateProject.order || 0) : 0;
+          if (orderA !== orderB) return orderA - orderB;
+          
+          // Puis par statut (assigned > pending > approved)
+          const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
+          return statusOrder[a.status] - statusOrder[b.status];
+        });
+      }
+      setProjects(projectsToSet);
+    } catch (e) {
+      console.error("Error loading projects page data:", e);
+      setError('Error loading data: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [API, setMe, setProjects, setAllProjects, setError, setLoading]); // Ajouter toutes les dépendances ici
+
   useEffect(() => {
     const token = getAuthToken();
     if (!token) {
@@ -49,105 +146,8 @@ function ProjectsPage() {
       return;
     }
 
-    async function loadData() {
-      try {
-        setLoading(true);
-    setError(null);
-
-        // Charger les informations de l'utilisateur
-        const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
-        }
-        const userData = await userRes.json();
-        setMe(userData);
-
-        // Chargement conditionnel des projets
-        let projectsToSet = [];
-        if (userData.role === 'staff' || userData.role === 'admin') {
-          // Pour staff/admin: charger tous les projets
-          const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
-          if (!allProjectsRes.ok) {
-            const errorData = await allProjectsRes.json();
-            throw new Error(errorData.error || 'Échec du chargement de tous les projets.');
-          }
-          const rawProjects = await allProjectsRes.json();
-          // Dédupliquer les projets par _id
-          const uniqueProjects = Array.from(new Map(rawProjects.map(project => [project._id, project])).values());
-          // Sépare les projets templates des projets assignés
-          const projectTemplates = uniqueProjects.filter(p => p.status === 'template');
-          const studentProjects = uniqueProjects.filter(p => p.status !== 'template');
-
-          // Regrouper les projets d'apprenants par leur templateProject
-          const groupedProjects = projectTemplates.map(template => ({
-            ...template,
-            assignedProjects: studentProjects.filter(p => p.templateProject && p.templateProject._id === template._id)
-          }));
-          
-          // Si des projets d'apprenants n'ont pas de template (ce qui ne devrait pas arriver avec la logique actuelle, mais au cas où)
-          const projectsWithoutTemplate = studentProjects.filter(p => !p.templateProject);
-          
-          setAllProjects(groupedProjects);
-          setProjects(projectsWithoutTemplate); // Pourrait être utilisé pour afficher des projets non liés à un template
-        } else {
-          // Pour apprenant: charger leurs projets
-          const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
-          if (!myProjectsRes.ok) {
-            const errorData = await myProjectsRes.json();
-            throw new Error(errorData.error || 'Échec du chargement de mes projets.');
-          }
-          const rawProjects = await myProjectsRes.json();
-          console.log('Projets bruts reçus:', rawProjects);
-          
-          // Dédupliquer les projets par templateProject._id en gardant le statut le plus avancé
-          // quand un projet passe de assigned à pending puis approved
-          const projectMap = new Map();
-          
-          rawProjects.forEach(project => {
-            const key = project.templateProject ? project.templateProject._id || project.templateProject : project._id;
-            const existingProject = projectMap.get(key);
-            
-            if (!existingProject) {
-              projectMap.set(key, project);
-            } else {
-              // Garder le projet avec le statut le plus avancé
-              const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-              const existingStatus = statusOrder[existingProject.status] || 0;
-              const newStatus = statusOrder[project.status] || 0;
-              
-              if (newStatus > existingStatus) {
-                projectMap.set(key, project);
-              }
-            }
-          });
-          
-          const uniqueProjects = Array.from(projectMap.values());
-          console.log('Projets uniques après déduplication:', uniqueProjects);
-          
-          // Trier par ordre du templateProject, puis par statut (assigned en premier, puis pending, puis approved)
-          projectsToSet = uniqueProjects.sort((a, b) => {
-            // D'abord par ordre du template
-            const orderA = a.templateProject ? (a.templateProject.order || 0) : 0;
-            const orderB = b.templateProject ? (b.templateProject.order || 0) : 0;
-            if (orderA !== orderB) return orderA - orderB;
-            
-            // Puis par statut (assigned > pending > approved)
-            const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-            return statusOrder[a.status] - statusOrder[b.status];
-          });
-        }
-        setProjects(projectsToSet);
-    } catch (e) {
-        console.error("Error loading projects page data:", e);
-        setError('Error loading data: ' + e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [router]);
+    loadData(token); // Passer le token à loadData
+  }, [router, loadData]); // Ajouter loadData aux dépendances du useEffect
 
   const getEmbedUrl = (url) => {
     if (!url) return null;
@@ -205,7 +205,7 @@ function ProjectsPage() {
         setProjectResourceLinks(''); // Réinitialiser
         setProjectObjectives(''); // Réinitialiser
         setProjectOrder(0); // Réinitialiser
-        loadData(); // Recharger toutes les données
+        loadData(token); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de l\'ajout du projet.');
       }
@@ -297,7 +297,7 @@ function ProjectsPage() {
         setProjectResourceLinks(''); // Réinitialiser
         setProjectObjectives(''); // Réinitialiser
         setProjectOrder(0); // Réinitialiser
-        loadData(); // Recharger toutes les données
+        loadData(getAuthToken()); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
       }
@@ -337,7 +337,7 @@ function ProjectsPage() {
         alert('Projet supprimé avec succès !');
         setShowDeleteProjectModal(false);
         setCurrentProjectToDelete(null);
-        loadData(); // Recharger toutes les données
+        loadData(getAuthToken()); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la suppression du projet.');
       }
@@ -429,7 +429,7 @@ function ProjectsPage() {
         setProjectSubmissionRepoUrl('');
         setSelectedSlotIds([]);
         setAvailableSlots([]);
-        loadData(); // Recharger les données
+        loadData(getAuthToken()); // Recharger les données
       } else {
         throw new Error(data.error || 'Échec de la soumission du projet.');
       }
@@ -562,7 +562,7 @@ function ProjectsPage() {
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="card-body d-flex flex-column">
-                    <div>
+                  <div>
                       <h5 className="card-title text-primary mb-2">
                         <i className="bi bi-folder-check me-2"></i> {project.title}
                       </h5>
@@ -584,13 +584,13 @@ function ProjectsPage() {
                         {project.status === 'assigned' ? 'Assigné' : 
                          project.status === 'pending' ? 'En cours d\'évaluation' : 
                          'Approuvé'}
-                      </span>
+                    </span>
                       
                       {/* Message spécial pour les projets approuvés */}
                       {project.status === 'approved' && (
                           <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
                       )}
-                    </div>
+                </div>
                     
                     {/* Dépôt GitHub - toujours visible si disponible */}
                     {project.repoUrl && (
@@ -995,9 +995,9 @@ function ProjectsPage() {
                         {currentProjectToSubmit.objectives.map((objective, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
-                          </li>
-                        ))}
-                      </ul>
+                      </li>
+                    ))}
+      </ul>
                     </div>
                   )}
 

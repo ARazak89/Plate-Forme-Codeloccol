@@ -37,12 +37,12 @@ export async function createProject(req, res) {
 
     // Projects created by staff are initially templates, assigned to no specific student
     // and have a status of 'assigned'.
-    const project = await Project.create({
-      title,
-      description,
-      demoVideoUrl,
-      specifications,
-      size,
+    const project = await Project.create({ 
+      title, 
+      description, 
+      demoVideoUrl, 
+      specifications, 
+      size, 
       status: 'template', // Le statut doit être 'template' pour les modèles de projet
       order, // Inclure l'ordre
       exerciseStatements, // Inclure les énoncés d'exercice
@@ -224,7 +224,7 @@ export async function approveProject(req, res) {
     const student = await User.findById(p.student);
     student.daysRemaining += DAY_BONUS[p.size] || 1;
     student.level = Math.max(student.level, 1) + 1;
-
+    
     // Incrémenter le nombre total de projets complétés
     student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1;
 
@@ -245,26 +245,26 @@ export async function approveProject(req, res) {
 
 // Fonction d'aide pour attribuer des badges
 async function _handleBadgeAttribution(student) {
-  if (student.totalProjectsCompleted === 1) {
+    if (student.totalProjectsCompleted === 1) {
     const firstProjectBadge = await Badge.findOne({
       name: 'Premier Projet Validé',
     });
-    if (firstProjectBadge && !student.badges.includes(firstProjectBadge._id)) {
-      student.badges.push(firstProjectBadge._id);
+      if (firstProjectBadge && !student.badges.includes(firstProjectBadge._id)) {
+        student.badges.push(firstProjectBadge._id);
       await Notification.create({
         user: student._id,
         type: 'badge_earned',
         message: `Félicitations ! Vous avez gagné le badge \'${firstProjectBadge.name}\'.`,
       });
+      }
     }
-  }
 
-  if (student.totalProjectsCompleted === 5) {
+    if (student.totalProjectsCompleted === 5) {
     const fiveProjectsBadge = await Badge.findOne({
       name: 'Cinq Projets Complétés',
     });
-    if (fiveProjectsBadge && !student.badges.includes(fiveProjectsBadge._id)) {
-      student.badges.push(fiveProjectsBadge._id);
+      if (fiveProjectsBadge && !student.badges.includes(fiveProjectsBadge._id)) {
+        student.badges.push(fiveProjectsBadge._id);
       await Notification.create({
         user: student._id,
         type: 'badge_earned',
@@ -412,7 +412,7 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
       await Notification.create({
         user: student._id,
         type: 'project_assigned',
-        message: `Un nouveau projet, \'${assignedNextProject.title}\', vous a été assigné après l'approbation de votre précédent projet.`,
+        message: `Un nouveau projet, \'${assignedNextProject.title}\', vous a été assigné après l'approbation de votre précédent projet.`, 
       });
       console.log(
         `Assigned next project \'${assignedNextProject.title}\' to ${student.name}.`,

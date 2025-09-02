@@ -41,9 +41,9 @@ const seedDatabase = async () => {
       password: hashedPassword,
       role: "admin",
       status: "active",
-      level: 1, 
+        level: 1,
       daysRemaining: 9999, 
-      totalProjectsCompleted: 0, 
+        totalProjectsCompleted: 0,
       lastLogin: new Date(),
       profilePicture: "/uploads/profile_pictures/default-admin.png", // Photo de profil par défaut
       badges: []
