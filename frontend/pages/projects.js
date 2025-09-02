@@ -51,7 +51,7 @@ function ProjectsPage() {
     setError(null);
 
         // Charger les informations de l'utilisateur
-        const userRes = await fetch(`${API}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
         if (!userRes.ok) {
           const errorData = await userRes.json();
           throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
@@ -63,7 +63,7 @@ function ProjectsPage() {
         let projectsToSet = [];
         if (userData.role === 'staff' || userData.role === 'admin') {
           // Pour staff/admin: charger tous les projets
-          const allProjectsRes = await fetch(`${API}/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
+          const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
           if (!allProjectsRes.ok) {
             const errorData = await allProjectsRes.json();
             throw new Error(errorData.error || 'Échec du chargement de tous les projets.');
@@ -88,7 +88,7 @@ function ProjectsPage() {
           setProjects(projectsWithoutTemplate); // Pourrait être utilisé pour afficher des projets non liés à un template
         } else {
           // Pour apprenant: charger leurs projets
-          const myProjectsRes = await fetch(`${API}/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
+          const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
           if (!myProjectsRes.ok) {
             const errorData = await myProjectsRes.json();
             throw new Error(errorData.error || 'Échec du chargement de mes projets.');
@@ -182,7 +182,7 @@ function ProjectsPage() {
         throw new Error('Token not found. Please log in.');
       }
 
-      const res = await fetch(`${API}/projects`, {
+      const res = await fetch(`${API}/api/projects`, {
       method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: projectTitle, description: projectDescription, demoVideoUrl: projectDemoVideoUrl, specifications: projectSpecifications, size: projectSize }),
@@ -233,7 +233,7 @@ function ProjectsPage() {
         throw new Error('Token not found. Please log in.');
       }
 
-      const res = await fetch(`${API}/projects/${currentProjectToEdit._id}`, {
+      const res = await fetch(`${API}/api/projects/${currentProjectToEdit._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
@@ -288,7 +288,7 @@ function ProjectsPage() {
         throw new Error('Token not found. Please log in.');
       }
 
-      const res = await fetch(`${API}/projects/${projectId}`, {
+      const res = await fetch(`${API}/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
         });
@@ -320,7 +320,7 @@ function ProjectsPage() {
     try {
       const token = getAuthToken();
       // Charger les slots disponibles pour ce projet
-      const slotsRes = await fetch(`${API}/availability/available-for-project/${project._id}`, {
+      const slotsRes = await fetch(`${API}/api/availability/available-for-project/${project._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (slotsRes.ok) {
@@ -361,7 +361,7 @@ function ProjectsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`${API}/projects/${currentProjectToSubmit._id}/submit`, {
+      const res = await fetch(`${API}/api/projects/${currentProjectToSubmit._id}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
