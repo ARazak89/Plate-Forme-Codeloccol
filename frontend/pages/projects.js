@@ -217,6 +217,26 @@ function ProjectsPage() {
     }
   };
 
+  const handleShowAddProjectModal = () => {
+    // Calculer le plus grand numéro d'ordre existant parmi les templates de projet
+    const maxOrder = allProjects.reduce((max, projectGroup) => {
+      return Math.max(max, projectGroup.order || 0);
+    }, 0);
+    setProjectOrder(maxOrder + 1);
+    setShowAddProjectModal(true);
+    // Réinitialiser les autres champs du formulaire pour un nouveau projet
+    setProjectTitle('');
+    setProjectDescription('');
+    setProjectRepoUrl('');
+    setProjectDemoVideoUrl('');
+    setProjectSpecifications('');
+    setProjectSize('short');
+    setProjectExerciseStatements('');
+    setProjectResourceLinks('');
+    setProjectObjectives('');
+    setError(null);
+  };
+
   const handleEditProject = (project) => {
     setCurrentProjectToEdit(project);
     setProjectTitle(project.title);
@@ -450,7 +470,7 @@ function ProjectsPage() {
         // Vue pour Staff/Admin: Tableau de tous les projets avec CRUD
         <div className="row">
           <div className="col-12 mb-3 d-flex justify-content-end">
-            <button className="btn btn-primary" onClick={() => setShowAddProjectModal(true)}>
+            <button className="btn btn-primary" onClick={handleShowAddProjectModal}>
               <i className="bi bi-plus-circle me-2"></i> Ajouter un Nouveau Projet
             </button>
           </div>
