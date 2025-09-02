@@ -25,11 +25,11 @@ function ProjectsPage() {
   const [projectDescription, setProjectDescription] = useState('');
   const [projectRepoUrl, setProjectRepoUrl] = useState('');
   const [projectDemoVideoUrl, setProjectDemoVideoUrl] = useState('');
-  const [projectSpecifications, setProjectSpecifications] = useState('');
+  const [projectSpecifications, setProjectSpecifications] = useState([]); // Changé de chaîne à tableau
   const [projectSize, setProjectSize] = useState('short');
-  const [projectExerciseStatements, setProjectExerciseStatements] = useState(''); // Nouvel état pour les énoncés d'exercice
-  const [projectResourceLinks, setProjectResourceLinks] = useState(''); // Nouvel état pour les liens de ressources
-  const [projectObjectives, setProjectObjectives] = useState(''); // Nouvel état pour les objectifs
+  const [projectExerciseStatements, setProjectExerciseStatements] = useState([]); // Changé de chaîne à tableau
+  const [projectResourceLinks, setProjectResourceLinks] = useState([]); // Changé de chaîne à tableau
+  const [projectObjectives, setProjectObjectives] = useState([]); // Changé de chaîne à tableau
   const [projectOrder, setProjectOrder] = useState(0); // Nouvel état pour l'ordre du projet
   
   // États pour la soumission de projet par un apprenant
@@ -189,7 +189,17 @@ function ProjectsPage() {
       const res = await fetch(`${API}/api/projects`, {
       method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: projectTitle, description: projectDescription, demoVideoUrl: projectDemoVideoUrl, specifications: projectSpecifications, size: projectSize, order: projectOrder }),
+        body: JSON.stringify({ 
+          title: projectTitle, 
+          description: projectDescription, 
+          demoVideoUrl: projectDemoVideoUrl, 
+          specifications: projectSpecifications, 
+          size: projectSize, 
+          order: projectOrder, 
+          objectives: projectObjectives, 
+          exerciseStatements: projectExerciseStatements, 
+          resourceLinks: projectResourceLinks 
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -199,11 +209,11 @@ function ProjectsPage() {
         setProjectTitle('');
         setProjectDescription('');
         setProjectDemoVideoUrl('');
-        setProjectSpecifications('');
+        setProjectSpecifications([]); // Réinitialiser
         setProjectSize('short');
-        setProjectExerciseStatements(''); // Réinitialiser
-        setProjectResourceLinks(''); // Réinitialiser
-        setProjectObjectives(''); // Réinitialiser
+        setProjectExerciseStatements([]); // Réinitialiser
+        setProjectResourceLinks([]); // Réinitialiser
+        setProjectObjectives([]); // Réinitialiser
         setProjectOrder(0); // Réinitialiser
         loadData(token); // Recharger toutes les données
       } else {
@@ -229,11 +239,11 @@ function ProjectsPage() {
     setProjectDescription('');
     setProjectRepoUrl('');
     setProjectDemoVideoUrl('');
-    setProjectSpecifications('');
+    setProjectSpecifications([]);
     setProjectSize('short');
-    setProjectExerciseStatements('');
-    setProjectResourceLinks('');
-    setProjectObjectives('');
+    setProjectExerciseStatements([]);
+    setProjectResourceLinks([]);
+    setProjectObjectives([]);
     setError(null);
   };
 
@@ -243,11 +253,11 @@ function ProjectsPage() {
     setProjectDescription(project.description);
     setProjectRepoUrl(project.repoUrl || '');
     setProjectDemoVideoUrl(project.demoVideoUrl || '');
-    setProjectSpecifications(project.specifications || '');
+    setProjectSpecifications(project.specifications || []); // Joindre pour l'édition
     setProjectSize(project.size || 'short');
-    setProjectExerciseStatements(project.exerciseStatements ? project.exerciseStatements.join('\n') : ''); // Joindre pour l'édition
-    setProjectResourceLinks(project.resourceLinks ? project.resourceLinks.join('\n') : ''); // Joindre pour l'édition
-    setProjectObjectives(project.objectives ? project.objectives.join('\n') : ''); // Joindre pour l'édition
+    setProjectExerciseStatements(project.exerciseStatements || []); // Joindre pour l'édition
+    setProjectResourceLinks(project.resourceLinks || []); // Joindre pour l'édition
+    setProjectObjectives(project.objectives || []); // Joindre pour l'édition
     setProjectOrder(project.order || 0); // Pré-remplir l'ordre
     setShowEditProjectModal(true);
   };
@@ -275,9 +285,9 @@ function ProjectsPage() {
           demoVideoUrl: projectDemoVideoUrl, 
           specifications: projectSpecifications, 
           size: projectSize, 
-          exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== ''), 
-          resourceLinks: projectResourceLinks.split('\n').filter(s => s.trim() !== ''), 
-          objectives: projectObjectives.split('\n').filter(s => s.trim() !== ''),
+          exerciseStatements: projectExerciseStatements, 
+          resourceLinks: projectResourceLinks, 
+          objectives: projectObjectives,
           order: projectOrder, // Inclure l'ordre
         }),
       });
@@ -291,11 +301,11 @@ function ProjectsPage() {
         setProjectDescription('');
         setProjectRepoUrl('');
         setProjectDemoVideoUrl('');
-        setProjectSpecifications('');
+        setProjectSpecifications([]); // Réinitialiser
         setProjectSize('short');
-        setProjectExerciseStatements(''); // Réinitialiser
-        setProjectResourceLinks(''); // Réinitialiser
-        setProjectObjectives(''); // Réinitialiser
+        setProjectExerciseStatements([]); // Réinitialiser
+        setProjectResourceLinks([]); // Réinitialiser
+        setProjectObjectives([]); // Réinitialiser
         setProjectOrder(0); // Réinitialiser
         loadData(getAuthToken()); // Recharger toutes les données
       } else {
@@ -484,7 +494,8 @@ function ProjectsPage() {
                 <table className="table table-striped table-hover align-middle">
                   <thead>
                     <tr>
-                      <th>Titre</th>
+                      <th>Ordre</th>
+                      <th>Titre du Projet</th>
                       <th>Description</th>
                       <th>Type</th>
                       <th>Étudiant Assigné</th>
@@ -496,16 +507,17 @@ function ProjectsPage() {
                     {allProjects.map(projectGroup => (
                       <React.Fragment key={projectGroup._id}>
                         <tr className="table-primary">
+                          <td><strong>{projectGroup.order}</strong></td>
                           <td><i className="bi bi-folder-fill me-2 text-primary"></i><strong>{projectGroup.title}</strong></td>
                           <td>{projectGroup.description.substring(0, 70)}...</td>
-                          <td><span className="badge bg-dark rounded-pill"><i className="bi bi-card-list me-1"></i> Modèle</span></td>
+                          <td><span className="badge bg-dark rounded-pill"><i className="bi bi-gear me-1"></i> Maître</span></td>
                           <td>N/A</td>
-                          <td><span className="badge bg-secondary rounded-pill"><i className="bi bi-file-earmark-code me-1"></i> Template</span></td>
+                          <td><span className="badge bg-secondary rounded-pill"><i className="bi bi-puzzle-fill me-1"></i> Actif</span></td>
                           <td className="text-center">
-                            <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(projectGroup)} title="Modifier Modèle de Projet">
+                            <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(projectGroup)} title="Modifier Projet Maître">
                               <i className="bi bi-pencil-square"></i>
                             </button>
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(projectGroup._id)} title="Supprimer Modèle de Projet">
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(projectGroup._id)} title="Supprimer Projet Maître">
                               <i className="bi bi-trash"></i>
                             </button>
                           </td>
@@ -513,9 +525,10 @@ function ProjectsPage() {
                         {projectGroup.assignedProjects.length > 0 ? (
                           projectGroup.assignedProjects.map(assignedProject => (
                             <tr key={assignedProject._id}>
+                              <td></td> {/* Cellule vide pour l'alignement */}
                               <td><i className="bi bi-arrow-return-right me-2 text-muted"></i> {assignedProject.title}</td>
                               <td><small>{assignedProject.description.substring(0, 50)}...</small></td>
-                              <td><span className="badge bg-success rounded-pill"><i className="bi bi-person-check me-1"></i> Assigné</span></td>
+                              <td><span className="badge bg-success rounded-pill"><i className="bi bi-person-check me-1"></i> Apprenant</span></td>
                               <td>{assignedProject.student ? assignedProject.student.name : 'N/A'}</td>
                               <td>
                                 <span className={`badge bg-${assignedProject.status === 'approved' ? 'success' : assignedProject.status === 'rejected' ? 'danger' : 'warning'} rounded-pill`}>
@@ -535,7 +548,9 @@ function ProjectsPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="6" className="text-center text-muted py-2">Aucun projet assigné pour ce modèle.</td>
+                            <td></td>
+                            <td colSpan="5" className="text-center text-muted py-2">Aucun projet assigné pour ce projet maître.</td>
+                            <td></td>
                           </tr>
                         )}
                       </React.Fragment>
@@ -812,15 +827,39 @@ function ProjectsPage() {
 
                   {/* Objectifs */}
                   <div className="mb-3">
-                    <label htmlFor="projectObjectives" className="form-label">Objectifs (un par ligne, Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectObjectives"
-                      rows="3"
-                      value={projectObjectives}
-                      onChange={(e) => setProjectObjectives(e.target.value)}
-                      placeholder="Entrez chaque objectif sur une nouvelle ligne"
-                    ></textarea>
+                    <label htmlFor="projectObjectives" className="form-label d-block">Objectifs (Optionnel)</label>
+                    {projectObjectives.map((objective, index) => (
+                      <div key={index} className="input-group mb-2">
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={objective}
+                          onChange={(e) => {
+                            const newObjectives = [...projectObjectives];
+                            newObjectives[index] = e.target.value;
+                            setProjectObjectives(newObjectives);
+                          }}
+                          placeholder="Entrez un objectif"
+                        />
+                        <button
+                          className="btn btn-outline-danger"
+                          type="button"
+                          onClick={() => {
+                            const newObjectives = projectObjectives.filter((_, i) => i !== index);
+                            setProjectObjectives(newObjectives);
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={() => setProjectObjectives([...projectObjectives, ''])}
+                    >
+                      <i className="bi bi-plus-circle me-2"></i> Ajouter un objectif
+                    </button>
                     <div className="form-text text-muted">Décrivez les principaux objectifs que l'apprenant doit atteindre.</div>
                   </div>
 
@@ -839,27 +878,76 @@ function ProjectsPage() {
                   
                   {/* Spécifications */}
                   <div className="mb-3">
-                    <label htmlFor="projectSpecifications" className="form-label">Spécifications (Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectSpecifications"
-                      rows="3"
-                      value={projectSpecifications}
-                      onChange={(e) => setProjectSpecifications(e.target.value)}
-                    ></textarea>
+                    <label htmlFor="projectSpecifications" className="form-label d-block">Spécifications (Optionnel)</label>
+                    {projectSpecifications.map((spec, index) => (
+                      <div key={index} className="input-group mb-2">
+                        <textarea
+                          className="form-control"
+                          rows="2"
+                          value={spec}
+                          onChange={(e) => {
+                            const newSpecs = [...projectSpecifications];
+                            newSpecs[index] = e.target.value;
+                            setProjectSpecifications(newSpecs);
+                          }}
+                          placeholder="Entrez une spécification"
+                        ></textarea>
+                        <button
+                          className="btn btn-outline-danger"
+                          type="button"
+                          onClick={() => {
+                            const newSpecs = projectSpecifications.filter((_, i) => i !== index);
+                            setProjectSpecifications(newSpecs);
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={() => setProjectSpecifications([...projectSpecifications, ''])}
+                    >
+                      <i className="bi bi-plus-circle me-2"></i> Ajouter une spécification
+                    </button>
                   </div>
 
                   {/* Liens de Ressources */}
                   <div className="mb-3">
                     <label htmlFor="projectResourceLinks" className="form-label">Liens de Ressources (un par ligne, Optionnel)</label>
-                    <textarea
-                      className="form-control"
-                      id="projectResourceLinks"
-                      rows="3"
-                      value={projectResourceLinks}
-                      onChange={(e) => setProjectResourceLinks(e.target.value)}
-                      placeholder="Entrez chaque lien de ressource sur une nouvelle ligne (ex: https://example.com/doc.pdf)"
-                    ></textarea>
+                    {projectResourceLinks.map((link, index) => (
+                      <div key={index} className="input-group mb-2">
+                        <input
+                          type="url"
+                          className="form-control"
+                          value={link}
+                          onChange={(e) => {
+                            const newLinks = [...projectResourceLinks];
+                            newLinks[index] = e.target.value;
+                            setProjectResourceLinks(newLinks);
+                          }}
+                          placeholder="https://example.com/doc.pdf"
+                        />
+                        <button
+                          className="btn btn-outline-danger"
+                          type="button"
+                          onClick={() => {
+                            const newLinks = projectResourceLinks.filter((_, i) => i !== index);
+                            setProjectResourceLinks(newLinks);
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={() => setProjectResourceLinks([...projectResourceLinks, ''])}
+                    >
+                      <i className="bi bi-plus-circle me-2"></i> Ajouter un lien
+                    </button>
                     <div className="form-text text-muted">Fournissez des liens vers des documentations, tutoriels, ou autres ressources utiles.</div>
                   </div>
 
@@ -876,21 +964,43 @@ function ProjectsPage() {
                     />
                   </div>
 
-                  {/* Champ pour les énoncés d'exercice (conditionnel) */}
-                  { (showAddProjectModal || (currentProjectToEdit && (currentProjectToEdit.title === "CLI (Command Line Interface)" || currentProjectToEdit.title === "Pratique guidée Git / GitHub"))) && (
-                    <div className="mb-3">
-                      <label htmlFor="projectExerciseStatements" className="form-label">Énoncés d'Exercice (un par ligne)</label>
-                      <textarea
-                        className="form-control"
-                        id="projectExerciseStatements"
-                        rows="5"
-                        value={projectExerciseStatements}
-                        onChange={(e) => setProjectExerciseStatements(e.target.value)}
-                        placeholder="Entrez chaque énoncé d'exercice sur une nouvelle ligne"
-                      ></textarea>
-                      <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
-                    </div>
-                  )}
+                  {/* Champ pour les énoncés d'exercice */}
+                  <div className="mb-3">
+                    <label htmlFor="projectExerciseStatements" className="form-label d-block">Énoncés d'Exercice</label>
+                    {projectExerciseStatements.map((statement, index) => (
+                      <div key={index} className="input-group mb-2">
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={statement}
+                          onChange={(e) => {
+                            const newStatements = [...projectExerciseStatements];
+                            newStatements[index] = e.target.value;
+                            setProjectExerciseStatements(newStatements);
+                          }}
+                          placeholder="Entrez un énoncé d'exercice"
+                        />
+                        <button
+                          className="btn btn-outline-danger"
+                          type="button"
+                          onClick={() => {
+                            const newStatements = projectExerciseStatements.filter((_, i) => i !== index);
+                            setProjectExerciseStatements(newStatements);
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={() => setProjectExerciseStatements([...projectExerciseStatements, ''])}
+                    >
+                      <i className="bi bi-plus-circle me-2"></i> Ajouter un énoncé d'exercice
+                    </button>
+                    <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
+                  </div>
 
                   {/* Ordre du Projet (Numéro) */}
                   <div className="mb-3">

@@ -499,8 +499,8 @@ export async function updateProject(req, res) {
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
     if (
-      !project.student ||
-      (!project.student.equals(req.user._id) &&
+      !project.student || // Si le projet n'a pas d'étudiant assigné (c'est un modèle)
+      (project.student && !project.student.equals(req.user._id) && // Ou si l'utilisateur n'est pas l'étudiant assigné
         req.user.role !== 'staff' &&
         req.user.role !== 'admin')
     ) {
@@ -533,8 +533,8 @@ export async function deleteProject(req, res) {
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
     if (
-      !project.student ||
-      (!project.student.equals(req.user._id) &&
+      !project.student || // Si le projet n'a pas d'étudiant assigné (c'est un modèle)
+      (project.student && !project.student.equals(req.user._id) && // Ou si l'utilisateur n'est pas l'étudiant assigné
         req.user.role !== 'staff' &&
         req.user.role !== 'admin')
     ) {
