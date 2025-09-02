@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link'; // Importez Link
 import Script from 'next/script'; // Importez Script
 import { getAuthToken } from '../utils/auth'; // Importer la fonction getAuthToken
 
@@ -145,10 +146,10 @@ const Layout = ({ children }) => {
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow-lg">
         <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center fw-bold" href="/dashboard">
+          <Link href="/dashboard" className="navbar-brand d-flex align-items-center fw-bold">
             <i className="bi bi-code-slash fs-4 me-2"></i>
             CodeLoccol
-          </a>
+          </Link>
           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span className="navbar-toggler-icon"></span>
           </button>
@@ -220,7 +221,7 @@ const Layout = ({ children }) => {
                   {user.name}
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="navbarDropdown">
-                  <li><a className="dropdown-item d-flex align-items-center" href="/profile"><i className="bi bi-person-circle me-2"></i> Profil</a></li>
+                  <li><Link href="/profile" className="dropdown-item d-flex align-items-center"><i className="bi bi-person-circle me-2"></i> Profil</Link></li>
                   <li><hr className="dropdown-divider" /></li>
                   <li><button className="dropdown-item d-flex align-items-center text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2"></i> Déconnexion</button></li>
                 </ul>
@@ -236,54 +237,54 @@ const Layout = ({ children }) => {
           <div className="position-sticky pt-3">
             <ul className="nav flex-column">
               <li className="nav-item">
-                <a className={`nav-link fs-5 ${
+                <Link href="/dashboard" className={`nav-link fs-5 ${
                   router.pathname === '/dashboard' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                  }`} aria-current="page" href="/dashboard">
+                  }`} aria-current="page">
                   <i className="bi bi-house-door-fill me-2"></i>
                   Tableau de bord
-                </a>
+                </Link>
               </li>
               <li className="nav-item">
-                <a className={`nav-link fs-5 ${
+                <Link href="/projects" className={`nav-link fs-5 ${
                   router.pathname === '/projects' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                }`} href="/projects">
+                }`}>
                   <i className="bi bi-folder-fill me-2"></i>
                   Mes Projets
-                </a>
+                </Link>
               </li>
               <li className="nav-item">
-                <a className={`nav-link fs-5 ${
+                <Link href="/hackathons" className={`nav-link fs-5 ${
                   router.pathname === '/hackathons' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                }`} href="/hackathons">
+                }`}>
                   <i className="bi bi-cup-fill me-2"></i>
                   Hackathons
-                </a>
+                </Link>
               </li>
               {/* Ajout des liens pour d'autres pages comme la gestion de profil, etc. */}
               <li className="nav-item">
-                <a className={`nav-link fs-5 ${
+                <Link href="/profile" className={`nav-link fs-5 ${
                   router.pathname === '/profile' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                }`} href="/profile">
+                }`}>
                   <i className="bi bi-person-circle me-2"></i>
                   Mon Profil
-                </a>
+                </Link>
               </li>
               <li className="nav-item">
-                <a className={`nav-link fs-5 ${
+                <Link href="/evaluations" className={`nav-link fs-5 ${
                   router.pathname === '/evaluations' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                }`} href="/evaluations">
+                }`}>
                   <i className="bi bi-check2-square me-2"></i>
                   Évaluations
-                </a>
+                </Link>
               </li>
               {user && (user.role === 'staff' || user.role === 'admin') && (
                 <li className="nav-item">
-                  <a className={`nav-link fs-5 ${
+                  <Link href="/admin/settings" className={`nav-link fs-5 ${
                     router.pathname === '/admin/settings' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
-                  }`} href="/admin/settings">
+                  }`}>
                     <i className="bi bi-gear-fill me-2"></i>
                     Admin/Staff
-                  </a>
+                  </Link>
                 </li>
               )}
             </ul>
