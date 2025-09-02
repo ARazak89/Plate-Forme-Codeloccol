@@ -374,7 +374,7 @@ export default function Dashboard() {
         fetchData(); // Refresh data to update evaluation lists
         handleCloseEvaluationModal();
       } else {
-        setError(data.error || 'Échec de la soumission de l'évaluation.');
+        setError(data.error || 'Échec de la soumission de l\'évaluation.');
       }
     } catch (e) {
       setError(e.message || 'Erreur lors de la communication avec le serveur.');
