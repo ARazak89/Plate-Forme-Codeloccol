@@ -236,7 +236,7 @@ const Layout = ({ children }) => {
           <div className="position-sticky pt-3">
             <ul className="nav flex-column">
               <li className="nav-item">
-                <a className={`nav-link ${
+                <a className={`nav-link fs-5 ${
                   router.pathname === '/dashboard' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                   }`} aria-current="page" href="/dashboard">
                   <i className="bi bi-house-door-fill me-2"></i>
@@ -244,7 +244,7 @@ const Layout = ({ children }) => {
                 </a>
               </li>
               <li className="nav-item">
-                <a className={`nav-link ${
+                <a className={`nav-link fs-5 ${
                   router.pathname === '/projects' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                 }`} href="/projects">
                   <i className="bi bi-folder-fill me-2"></i>
@@ -252,7 +252,7 @@ const Layout = ({ children }) => {
                 </a>
               </li>
               <li className="nav-item">
-                <a className={`nav-link ${
+                <a className={`nav-link fs-5 ${
                   router.pathname === '/hackathons' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                 }`} href="/hackathons">
                   <i className="bi bi-cup-fill me-2"></i>
@@ -261,7 +261,7 @@ const Layout = ({ children }) => {
               </li>
               {/* Ajout des liens pour d'autres pages comme la gestion de profil, etc. */}
               <li className="nav-item">
-                <a className={`nav-link ${
+                <a className={`nav-link fs-5 ${
                   router.pathname === '/profile' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                 }`} href="/profile">
                   <i className="bi bi-person-circle me-2"></i>
@@ -269,7 +269,7 @@ const Layout = ({ children }) => {
                 </a>
               </li>
               <li className="nav-item">
-                <a className={`nav-link ${
+                <a className={`nav-link fs-5 ${
                   router.pathname === '/evaluations' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                 }`} href="/evaluations">
                   <i className="bi bi-check2-square me-2"></i>
@@ -278,7 +278,7 @@ const Layout = ({ children }) => {
               </li>
               {user && (user.role === 'staff' || user.role === 'admin') && (
                 <li className="nav-item">
-                  <a className={`nav-link ${
+                  <a className={`nav-link fs-5 ${
                     router.pathname === '/admin/settings' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                   }`} href="/admin/settings">
                     <i className="bi bi-gear-fill me-2"></i>
