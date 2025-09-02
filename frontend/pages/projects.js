@@ -342,8 +342,20 @@ function ProjectsPage() {
     setSuccess(null);
     setLoading(true);
 
-    if (!currentProjectToSubmit || !projectSubmissionRepoUrl || selectedSlotIds.length !== 2) {
-      setError('Veuillez remplir tous les champs obligatoires et sélectionner exactement 2 créneaux d\'évaluateurs différents.');
+    const isRepoUrlOptional = [
+      "CLI (Command Line Interface)",
+      "Pratique guidée Git / GitHub"
+    ].includes(currentProjectToSubmit?.title);
+
+    if (!currentProjectToSubmit || selectedSlotIds.length !== 2 || (!isRepoUrlOptional && !projectSubmissionRepoUrl)) {
+      let errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
+      if (!isRepoUrlOptional && !projectSubmissionRepoUrl) {
+        errorMessage = 'Veuillez fournir l\'URL du dépôt GitHub et sélectionner exactement 2 créneaux d\'évaluateurs différents.';
+      }
+      if (isRepoUrlOptional && selectedSlotIds.length !== 2) {
+        errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
+      }
+      setError(errorMessage);
       setLoading(false);
       return;
     }
@@ -836,7 +848,7 @@ function ProjectsPage() {
                   <div className="mb-3">
                     <label htmlFor="repoUrl" className="form-label">
                       <i className="bi bi-github me-1"></i>
-                      URL du Dépôt GitHub <span className="text-danger">*</span>
+                      URL du Dépôt GitHub {!(isRepoUrlOptional) && <span className="text-danger">*</span>}
                     </label>
                     <input
                       type="url"
@@ -845,7 +857,7 @@ function ProjectsPage() {
                       value={projectSubmissionRepoUrl}
                       onChange={(e) => setProjectSubmissionRepoUrl(e.target.value)}
                       placeholder="https://github.com/votre-username/votre-projet"
-                      required
+                      required={!isRepoUrlOptional}
                     />
                     <div className="form-text text-muted">Assurez-vous que votre dépôt est public et contient le code source du projet.</div>
                   </div>
