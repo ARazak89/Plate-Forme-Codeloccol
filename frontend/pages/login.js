@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link'; // Importez Link
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -65,7 +66,7 @@ export default function Login() {
           Pas encore de compte ? <a href="/register" className="text-decoration-none">Créer un compte</a>
         </p> */}
         <p className="text-center">
-          <a href="/forgot-password" className="text-decoration-none">Mot de passe oublié ?</a>
+          <Link href="/forgot-password" className="text-decoration-none">Mot de passe oublié ?</Link>
         </p>
 
         {/* <div className="text-center mt-4">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router'; // Importez useRouter
+import Link from 'next/link'; // Importez Link
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -82,7 +83,7 @@ export default function Register() {
       <h1 className="display-4 text-danger">Inscription Désactivée</h1>
       <p className="lead">L'inscription de nouveaux comptes est actuellement désactivée.</p>
       <p className="lead">Veuillez contacter un administrateur pour plus d'informations.</p>
-      <a href="/login" className="btn btn-primary mt-3">Retour à la connexion</a>
+      <Link href="/login" className="btn btn-primary mt-3">Retour à la connexion</Link>
     </div>
   );
 }
