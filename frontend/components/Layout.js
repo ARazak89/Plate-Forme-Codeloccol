@@ -212,7 +212,7 @@ const Layout = ({ children }) => {
               <li className="nav-item dropdown ms-2">
                 <a className="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <img 
-                    src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.png'}
+                    src={user.profilePicture ? `${STATIC_ASSETS_BASE_URL}${user.profilePicture}` : '/default-avatar.jpg'}
                     alt="Avatar"
                     className="rounded-circle me-2 border border-light"
                     style={{ width: '30px', height: '30px', objectFit: 'cover' }}

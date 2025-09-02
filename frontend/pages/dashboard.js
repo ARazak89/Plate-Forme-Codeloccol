@@ -73,7 +73,7 @@ export default function Dashboard() {
     setIsLoading(true); // Début du chargement
     try {
       // Fetch user data
-      const userRes = await fetch(`${API}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+      const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
       if (!userRes.ok) {
         const errorData = await userRes.json();
         throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
@@ -87,7 +87,7 @@ export default function Dashboard() {
 
       // Fetch evaluations for my submitted projects (for apprenant only)
       if (userData.role === 'apprenant') {
-        const mySubmittedEvalRes = await fetch(`${API}/evaluations/mine`, { headers: { Authorization: `Bearer ${token}` } });
+        const mySubmittedEvalRes = await fetch(`${API}/api/evaluations/mine`, { headers: { Authorization: `Bearer ${token}` } });
         if (mySubmittedEvalRes.ok) {
           const mySubmittedEvalData = await mySubmittedEvalRes.json();
           setMySubmittedEvaluations(mySubmittedEvalData);
@@ -99,7 +99,7 @@ export default function Dashboard() {
 
       // Fetch projects for the current student (assigned, pending, or approved)
       if (userData.role === 'apprenant') {
-        const myProjectsRes = await fetch(`${API}/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
+        const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
         if (myProjectsRes.ok) {
           const rawMyProjectsData = await myProjectsRes.json();
           
@@ -154,7 +154,7 @@ export default function Dashboard() {
       }
 
       // Fetch pending evaluations as an evaluator (for all roles that can evaluate)
-        const evalAsEvaluatorRes = await fetch(`${API}/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
+        const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
         if (evalAsEvaluatorRes.ok) {
           const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
           setEvaluationsAsEvaluator(evalAsEvaluatorData);
@@ -166,7 +166,7 @@ export default function Dashboard() {
 
       // Fetch all pending evaluations for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
-        const allPendingEvalsRes = await fetch(`${API}/evaluations/all-pending-for-staff`, { headers: { Authorization: `Bearer ${token}` } });
+        const allPendingEvalsRes = await fetch(`${API}/api/evaluations/all-pending-for-staff`, { headers: { Authorization: `Bearer ${token}` } });
         if (allPendingEvalsRes.ok) {
           const allPendingEvalsData = await allPendingEvalsRes.json();
           setAllPendingEvaluationsForStaff(allPendingEvalsData);
@@ -178,7 +178,7 @@ export default function Dashboard() {
 
       // Fetch my created slots (for apprenant only, if they are also evaluators)
       if (userData.role === 'apprenant') {
-        const mySlotsRes = await fetch(`${API}/availability/mine`, { headers: { Authorization: `Bearer ${token}` } });
+        const mySlotsRes = await fetch(`${API}/api/availability/mine`, { headers: { Authorization: `Bearer ${token}` } });
         if (mySlotsRes.ok) {
           const mySlotsData = await mySlotsRes.json();
           setMyCreatedSlots(mySlotsData);
@@ -190,7 +190,7 @@ export default function Dashboard() {
 
       // Fetch projects awaiting staff review (for staff/admin only)
       if (userData.role === 'staff' || userData.role === 'admin') {
-        const staffReviewRes = await fetch(`${API}/projects/awaiting-staff-review`, { headers: { Authorization: `Bearer ${token}` } });
+        const staffReviewRes = await fetch(`${API}/api/projects/awaiting-staff-review`, { headers: { Authorization: `Bearer ${token}` } });
         if (staffReviewRes.ok) {
           const staffReviewData = await staffReviewRes.json();
           setProjectsAwaitingStaffReview(staffReviewData);
@@ -202,7 +202,7 @@ export default function Dashboard() {
 
       // Fetch list of learners for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
-        const learnersRes = await fetch(`${API}/users`, { headers: { Authorization: `Bearer ${token}` } });
+        const learnersRes = await fetch(`${API}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
         if (learnersRes.ok) {
           const learnersData = await learnersRes.json();
           setLearners(learnersData);
@@ -214,7 +214,7 @@ export default function Dashboard() {
 
       // Fetch all projects for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
-        const allProjectsRes = await fetch(`${API}/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
+        const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
         if (allProjectsRes.ok) {
           const allProjectsData = await allProjectsRes.json();
           setAllProjects(allProjectsData);
@@ -225,7 +225,7 @@ export default function Dashboard() {
       }
 
       // Fetch notifications
-      const notifRes = await fetch(`${API}/notifications/mine`, { headers: { Authorization: `Bearer ${token}` } });
+      const notifRes = await fetch(`${API}/api/notifications/mine`, { headers: { Authorization: `Bearer ${token}` } });
       if (!notifRes.ok) {
         const errorData = await notifRes.json();
         throw new Error(errorData.error || 'Échec du chargement des notifications.');
@@ -290,7 +290,7 @@ export default function Dashboard() {
     const endDateTime = new Date(`${slotDate}T${slotEndTime}:00.000Z`);
 
     try {
-      const res = await fetch(`${API}/availability`, {
+      const res = await fetch(`${API}/api/availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ startTime: startDateTime, endTime: endDateTime }),
@@ -359,7 +359,7 @@ export default function Dashboard() {
     setSuccess(null);
 
     try {
-      const res = await fetch(`${API}/evaluations/${currentEvaluationToSubmit._id}/submit`, {
+      const res = await fetch(`${API}/api/evaluations/${currentEvaluationToSubmit._id}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -374,7 +374,7 @@ export default function Dashboard() {
         fetchData(); // Refresh data to update evaluation lists
         handleCloseEvaluationModal();
       } else {
-        setError(data.error || 'Échec de la soumission de l\'évaluation.');
+        setError(data.error || 'Échec de la soumission de l'évaluation.');
       }
     } catch (e) {
       setError(e.message || 'Erreur lors de la communication avec le serveur.');
@@ -391,7 +391,7 @@ export default function Dashboard() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API}/projects`, {
+      const res = await fetch(`${API}/api/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: projectTitle, description: projectDescription, demoVideoUrl: projectDemoVideoUrl, specifications: projectSpecifications, size: projectSize }),
@@ -408,7 +408,7 @@ export default function Dashboard() {
         setProjectSize('short');
         fetchData(); // Recharger la liste des projets
       } else {
-        throw new Error(data.error || 'Échec de l\'ajout du projet.');
+        throw new Error(data.error || 'Échec de l'ajout du projet.');
       }
     } catch (e) {
       console.error("Error adding project:", e);
@@ -439,7 +439,7 @@ export default function Dashboard() {
     if (!currentProjectToEdit) return;
 
     try {
-      const res = await fetch(`${API}/projects/${currentProjectToEdit._id}`, {
+      const res = await fetch(`${API}/api/projects/${currentProjectToEdit._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
@@ -491,7 +491,7 @@ export default function Dashboard() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API}/projects/${projectId}`, {
+      const res = await fetch(`${API}/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -519,7 +519,7 @@ export default function Dashboard() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API}/users`, {
+      const res = await fetch(`${API}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -539,7 +539,7 @@ export default function Dashboard() {
         setNewUserRole('apprenant');
         fetchData(); // Recharger les données pour inclure le nouvel utilisateur
       } else {
-        throw new Error(data.error || 'Échec de l\'ajout de l\'utilisateur.');
+        throw new Error(data.error || 'Échec de l'ajout de l'utilisateur.');
       }
     } catch (e) {
       console.error("Error adding user:", e);
@@ -785,7 +785,7 @@ export default function Dashboard() {
                             {projectGroup.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
                           </h5>
                           <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: <strong>{projectGroup.evaluators.join(', ')}</strong></p>
-                          {projectGroup.project.repoUrl && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-muted"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></p>}
+                          {projectGroup.project.repoUrl && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-muted"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'projectGroup.project.repoUrl'}</a></p>}
                           {projectGroup.submissionDate && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(projectGroup.submissionDate).toLocaleString()}</p>}
                         </div>
                       </div>
@@ -893,7 +893,7 @@ export default function Dashboard() {
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationStartTime.toLocaleDateString()} de {evaluationStartTime.toLocaleTimeString()} à {evaluationEndTime.toLocaleTimeString()}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small>
-                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{evaluation.project.repoUrl}</a></small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'evaluation.project.repoUrl'}</a></small>
                         </div>
                         <button
                           onClick={() => handleOpenEvaluationModal(evaluation)}
@@ -934,7 +934,7 @@ export default function Dashboard() {
                           <div>
                             <h5 className="mb-1"><i className="bi bi-journals me-2"></i> Projet: {projectGroup.project.title} (Soumis par: {projectGroup.project.student?.name})</h5>
                             <small className="text-muted d-flex align-items-center mt-1">Statut du projet: <span className="badge bg-info ms-1 rounded-pill">{projectGroup.project.status}</span></small>
-                            <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></small>
+                            <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'projectGroup.project.repoUrl'}</a></small>
                           </div>
                           <div className="mt-3 w-100">
                             <strong>Évaluations des pairs :</strong>
@@ -1042,7 +1042,7 @@ export default function Dashboard() {
                         <h5 className="mb-1 text-danger"><i className="bi bi-exclamation-triangle me-2"></i> Projet: {project.title}</h5>
                         <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Soumis par: {project.student.name}</small>
                         <small className="text-muted d-flex align-items-center mt-1">Statut actuel: <span className="badge bg-info ms-1 rounded-pill">En Attente Staff</span></small>
-                        {project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{project.repoUrl}</a></small>}
+                        {project.repoUrl && <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'project.repoUrl'}</a></small>}
                         <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-calendar-event me-1"></i> Date de soumission: {new Date(project.submissionDate).toLocaleDateString()}</small>
                       </div>
                       <div className="d-flex flex-column flex-md-row mt-2 mt-md-0">
