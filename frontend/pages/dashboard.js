@@ -408,7 +408,7 @@ export default function Dashboard() {
         setProjectSize('short');
         fetchData(); // Recharger la liste des projets
       } else {
-        throw new Error(data.error || 'Échec de l'ajout du projet.');
+        throw new Error(data.error || 'Échec de l ajout du projet.');
       }
     } catch (e) {
       console.error("Error adding project:", e);
@@ -539,7 +539,7 @@ export default function Dashboard() {
         setNewUserRole('apprenant');
         fetchData(); // Recharger les données pour inclure le nouvel utilisateur
       } else {
-        throw new Error(data.error || 'Échec de l'ajout de l'utilisateur.');
+        throw new Error(data.error || 'Échec de l ajout de l utilisateur.');
       }
     } catch (e) {
       console.error("Error adding user:", e);
