@@ -30,6 +30,7 @@ function ProjectsPage() {
   const [projectExerciseStatements, setProjectExerciseStatements] = useState(''); // Nouvel état pour les énoncés d'exercice
   const [projectResourceLinks, setProjectResourceLinks] = useState(''); // Nouvel état pour les liens de ressources
   const [projectObjectives, setProjectObjectives] = useState(''); // Nouvel état pour les objectifs
+  const [projectOrder, setProjectOrder] = useState(0); // Nouvel état pour l'ordre du projet
   
   // États pour la soumission de projet par un apprenant
   const [showSubmitProjectModal, setShowSubmitProjectModal] = useState(false);
@@ -188,7 +189,7 @@ function ProjectsPage() {
       const res = await fetch(`${API}/api/projects`, {
       method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: projectTitle, description: projectDescription, demoVideoUrl: projectDemoVideoUrl, specifications: projectSpecifications, size: projectSize }),
+        body: JSON.stringify({ title: projectTitle, description: projectDescription, demoVideoUrl: projectDemoVideoUrl, specifications: projectSpecifications, size: projectSize, order: projectOrder }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -203,6 +204,7 @@ function ProjectsPage() {
         setProjectExerciseStatements(''); // Réinitialiser
         setProjectResourceLinks(''); // Réinitialiser
         setProjectObjectives(''); // Réinitialiser
+        setProjectOrder(0); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de l\'ajout du projet.');
@@ -226,6 +228,7 @@ function ProjectsPage() {
     setProjectExerciseStatements(project.exerciseStatements ? project.exerciseStatements.join('\n') : ''); // Joindre pour l'édition
     setProjectResourceLinks(project.resourceLinks ? project.resourceLinks.join('\n') : ''); // Joindre pour l'édition
     setProjectObjectives(project.objectives ? project.objectives.join('\n') : ''); // Joindre pour l'édition
+    setProjectOrder(project.order || 0); // Pré-remplir l'ordre
     setShowEditProjectModal(true);
   };
 
@@ -254,7 +257,8 @@ function ProjectsPage() {
           size: projectSize, 
           exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== ''), 
           resourceLinks: projectResourceLinks.split('\n').filter(s => s.trim() !== ''), 
-          objectives: projectObjectives.split('\n').filter(s => s.trim() !== '') // Inclure les objectifs
+          objectives: projectObjectives.split('\n').filter(s => s.trim() !== ''),
+          order: projectOrder, // Inclure l'ordre
         }),
       });
       const data = await res.json();
@@ -272,6 +276,7 @@ function ProjectsPage() {
         setProjectExerciseStatements(''); // Réinitialiser
         setProjectResourceLinks(''); // Réinitialiser
         setProjectObjectives(''); // Réinitialiser
+        setProjectOrder(0); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
@@ -866,6 +871,20 @@ function ProjectsPage() {
                       <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
                     </div>
                   )}
+
+                  {/* Ordre du Projet (Numéro) */}
+                  <div className="mb-3">
+                    <label htmlFor="projectOrder" className="form-label">Ordre du Projet <span className="text-danger">*</span></label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      id="projectOrder"
+                      value={projectOrder}
+                      onChange={(e) => setProjectOrder(parseInt(e.target.value, 10))}
+                      required
+                    />
+                    <div className="form-text text-muted">Définissez un numéro d'ordre pour ce projet (ex: 1, 2, 3...).</div>
+                  </div>
 
                   {/* Taille du Projet */}
                   <div className="mb-3">
