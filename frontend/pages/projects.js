@@ -27,6 +27,7 @@ function ProjectsPage() {
   const [projectDemoVideoUrl, setProjectDemoVideoUrl] = useState('');
   const [projectSpecifications, setProjectSpecifications] = useState('');
   const [projectSize, setProjectSize] = useState('short');
+  const [projectExerciseStatements, setProjectExerciseStatements] = useState(''); // Nouvel état pour les énoncés d'exercice
   
   // États pour la soumission de projet par un apprenant
   const [showSubmitProjectModal, setShowSubmitProjectModal] = useState(false);
@@ -197,6 +198,7 @@ function ProjectsPage() {
         setProjectDemoVideoUrl('');
         setProjectSpecifications('');
         setProjectSize('short');
+        setProjectExerciseStatements(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de l\'ajout du projet.');
@@ -217,6 +219,7 @@ function ProjectsPage() {
     setProjectDemoVideoUrl(project.demoVideoUrl || '');
     setProjectSpecifications(project.specifications || '');
     setProjectSize(project.size || 'short');
+    setProjectExerciseStatements(project.exerciseStatements ? project.exerciseStatements.join('\n') : ''); // Joindre pour l'édition
     setShowEditProjectModal(true);
   };
 
@@ -239,10 +242,11 @@ function ProjectsPage() {
         body: JSON.stringify({ 
           title: projectTitle, 
           description: projectDescription, 
-          repoUrl: currentProjectToEdit.student ? projectRepoUrl : undefined, // N'envoyer repoUrl que pour les projets d'apprenant
+          repoUrl: currentProjectToEdit.student ? projectRepoUrl : undefined, 
           demoVideoUrl: projectDemoVideoUrl, 
           specifications: projectSpecifications, 
-          size: projectSize 
+          size: projectSize, 
+          exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== '') // Inclure les énoncés d'exercice
         }),
       });
       const data = await res.json();
@@ -257,6 +261,7 @@ function ProjectsPage() {
         setProjectDemoVideoUrl('');
         setProjectSpecifications('');
         setProjectSize('short');
+        setProjectExerciseStatements(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
@@ -770,6 +775,23 @@ function ProjectsPage() {
                       <option value="long">Long (3 jours)</option>
                     </select>
                   </div>
+                  
+                  {/* Champ pour les énoncés d'exercice (conditionnel) */}
+                  { (showAddProjectModal || (currentProjectToEdit && (currentProjectToEdit.title === "CLI (Command Line Interface)" || currentProjectToEdit.title === "Pratique guidée Git / GitHub"))) && (
+                    <div className="mb-3">
+                      <label htmlFor="projectExerciseStatements" className="form-label">Énoncés d'Exercice (un par ligne)</label>
+                      <textarea
+                        className="form-control"
+                        id="projectExerciseStatements"
+                        rows="5"
+                        value={projectExerciseStatements}
+                        onChange={(e) => setProjectExerciseStatements(e.target.value)}
+                        placeholder="Entrez chaque énoncé d'exercice sur une nouvelle ligne"
+                      ></textarea>
+                      <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
+                    </div>
+                  )}
+
                   <button type="submit" className="btn btn-success mt-3">{currentProjectToEdit ? 'Modifier' : 'Ajouter'} le Projet</button>
                 </form>
               </div>
@@ -841,6 +863,18 @@ function ProjectsPage() {
                   )}
                   {currentProjectToSubmit.demoVideoUrl && (
                     <p className="d-flex align-items-center mb-1"><i className="bi bi-camera-video me-2 text-muted"></i><a href={currentProjectToSubmit.demoVideoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">Vidéo de Démonstration</a></p>
+                  )}
+                  {currentProjectToSubmit.exerciseStatements && currentProjectToSubmit.exerciseStatements.length > 0 && (
+                    <div className="mt-3">
+                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
+                      <ul className="list-group list-group-flush border-top pt-2">
+                        {currentProjectToSubmit.exerciseStatements.map((statement, index) => (
+                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                            <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
 

@@ -22,6 +22,7 @@ export async function createProject(req, res) {
       specifications,
       size = 'short',
       order,
+      exerciseStatements, // Ajout du champ exerciseStatements
     } = req.body;
 
     // Basic validation for template creation
@@ -42,6 +43,7 @@ export async function createProject(req, res) {
       size,
       status: 'template', // Le statut doit être 'template' pour les modèles de projet
       order, // Inclure l'ordre
+      exerciseStatements, // Inclure les énoncés d'exercice
       // student: null, // No student assigned initially
       // repoUrl: null, // No repo URL initially
     });
@@ -391,6 +393,7 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
         description: nextProjectTemplate.description,
         specifications: nextProjectTemplate.specifications,
         demoVideoUrl: nextProjectTemplate.demoVideoUrl,
+        exerciseStatements: nextProjectTemplate.exerciseStatements, // Inclure les énoncés d'exercice
         size: nextProjectTemplate.size,
         student: student._id,
         status: 'assigned',
@@ -483,7 +486,7 @@ export async function submitPeerEvaluation(req, res) {
 export async function updateProject(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, repoUrl, size, peerEvaluators } = req.body;
+    const { title, description, repoUrl, size, peerEvaluators, exerciseStatements } = req.body; // Ajout de exerciseStatements
 
     const project = await Project.findById(id);
     if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
@@ -505,7 +508,7 @@ export async function updateProject(req, res) {
 
     const updatedProject = await Project.findByIdAndUpdate(
       id,
-      { title, description, repoUrl, size, peerEvaluators },
+      { title, description, repoUrl, size, peerEvaluators, exerciseStatements }, // Inclure exerciseStatements
       { new: true, runValidators: true },
     );
 

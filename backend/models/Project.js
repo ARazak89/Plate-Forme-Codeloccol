@@ -31,6 +31,7 @@ const projectSchema = new mongoose.Schema(
       required: false,
     }, // Référence au projet template d'origine
     order: { type: Number, required: false }, // Ordre du projet dans le cursus (pour les templates)
+    exerciseStatements: [{ type: String }], // Nouveau champ pour les énoncés d'exercice (tableau de chaînes)
     peerEvaluators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     staffValidator: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     size: { type: String, enum: ["short", "medium", "long"], default: "short" }, // for +1/+2/+3 days
