@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import crypto from "crypto";
 import { sendMail } from "../utils/emailService.js";
+import Project from "../models/Project.js"; // Importer le modèle Project
 
 export async function register(req, res) {
   try {
@@ -16,6 +17,35 @@ export async function register(req, res) {
       password: hash,
       role: role || "apprenant",
     });
+
+    // Si l'utilisateur est un apprenant, lui assigner automatiquement le projet d'ordre 1
+    if (user.role === "apprenant") {
+      const firstProjectTemplate = await Project.findOne({
+        order: 1,
+        status: "template",
+      });
+
+      if (firstProjectTemplate) {
+        const assignedProject = await Project.create({
+          title: firstProjectTemplate.title,
+          description: firstProjectTemplate.description,
+          objectives: firstProjectTemplate.objectives,
+          specifications: firstProjectTemplate.specifications,
+          demoVideoUrl: firstProjectTemplate.demoVideoUrl,
+          exerciseStatements: firstProjectTemplate.exerciseStatements,
+          resourceLinks: firstProjectTemplate.resourceLinks,
+          size: firstProjectTemplate.size,
+          order: firstProjectTemplate.order,
+          status: "assigned", // Le statut est 'assigned' pour l'apprenant
+          student: user._id, // Assigné à ce nouvel apprenant
+          templateProject: firstProjectTemplate._id, // Référence au template
+        });
+
+        user.projects.push(assignedProject._id);
+        await user.save();
+      }
+    }
+
     res.json({ id: user._id, email: user.email });
   } catch (e) {
     res.status(500).json({ error: e.message });

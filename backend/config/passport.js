@@ -1,6 +1,7 @@
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import User from "../models/User.js";
+import Project from "../models/Project.js"; // Importer le modèle Project
 
 export default function (passport) {
   // Vérification des variables d'environnement pour OAuth
@@ -45,7 +46,34 @@ export default function (passport) {
               name: profile.displayName,
               email: profile.emails[0].value,
               password: null,
+              role: "apprenant", // Assigner le rôle d'apprenant par défaut
             });
+
+            // Assigner automatiquement le projet d'ordre 1 au nouvel apprenant
+            const firstProjectTemplate = await Project.findOne({
+              order: 1,
+              status: "template",
+            });
+
+            if (firstProjectTemplate) {
+              const assignedProject = await Project.create({
+                title: firstProjectTemplate.title,
+                description: firstProjectTemplate.description,
+                objectives: firstProjectTemplate.objectives,
+                specifications: firstProjectTemplate.specifications,
+                demoVideoUrl: firstProjectTemplate.demoVideoUrl,
+                exerciseStatements: firstProjectTemplate.exerciseStatements,
+                resourceLinks: firstProjectTemplate.resourceLinks,
+                size: firstProjectTemplate.size,
+                order: firstProjectTemplate.order,
+                status: "assigned", // Le statut est 'assigned' pour l'apprenant
+                student: user._id, // Assigné à ce nouvel apprenant
+                templateProject: firstProjectTemplate._id, // Référence au template
+              });
+
+              user.projects.push(assignedProject._id);
+              await user.save();
+            }
             done(null, user);
           }
         } catch (err) {
@@ -77,7 +105,34 @@ export default function (passport) {
                   ? profile.emails[0].value
                   : null,
               password: null,
+              role: "apprenant", // Assigner le rôle d'apprenant par défaut
             });
+
+            // Assigner automatiquement le projet d'ordre 1 au nouvel apprenant
+            const firstProjectTemplate = await Project.findOne({
+              order: 1,
+              status: "template",
+            });
+
+            if (firstProjectTemplate) {
+              const assignedProject = await Project.create({
+                title: firstProjectTemplate.title,
+                description: firstProjectTemplate.description,
+                objectives: firstProjectTemplate.objectives,
+                specifications: firstProjectTemplate.specifications,
+                demoVideoUrl: firstProjectTemplate.demoVideoUrl,
+                exerciseStatements: firstProjectTemplate.exerciseStatements,
+                resourceLinks: firstProjectTemplate.resourceLinks,
+                size: firstProjectTemplate.size,
+                order: firstProjectTemplate.order,
+                status: "assigned", // Le statut est 'assigned' pour l'apprenant
+                student: user._id, // Assigné à ce nouvel apprenant
+                templateProject: firstProjectTemplate._id, // Référence au template
+              });
+
+              user.projects.push(assignedProject._id);
+              await user.save();
+            }
             done(null, user);
           }
         } catch (err) {

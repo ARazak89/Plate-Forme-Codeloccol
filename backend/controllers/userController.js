@@ -299,6 +299,34 @@ export async function createUserByAdmin(req, res) {
 
     await newUser.save();
 
+    // Si l'utilisateur est un apprenant, lui assigner automatiquement le projet d'ordre 1
+    if (newUser.role === "apprenant") {
+      const firstProjectTemplate = await Project.findOne({
+        order: 1,
+        status: "template",
+      });
+
+      if (firstProjectTemplate) {
+        const assignedProject = await Project.create({
+          title: firstProjectTemplate.title,
+          description: firstProjectTemplate.description,
+          objectives: firstProjectTemplate.objectives,
+          specifications: firstProjectTemplate.specifications,
+          demoVideoUrl: firstProjectTemplate.demoVideoUrl,
+          exerciseStatements: firstProjectTemplate.exerciseStatements,
+          resourceLinks: firstProjectTemplate.resourceLinks,
+          size: firstProjectTemplate.size,
+          order: firstProjectTemplate.order,
+          status: "assigned", // Le statut est 'assigned' pour l'apprenant
+          student: newUser._id, // Assigné à ce nouvel apprenant
+          templateProject: firstProjectTemplate._id, // Référence au template
+        });
+
+        newUser.projects.push(assignedProject._id);
+        await newUser.save();
+      }
+    }
+
     res.status(201).json({ message: 'Utilisateur créé avec succès.', user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role } });
   } catch (e) {
     console.error("Error creating user by admin:", e);
