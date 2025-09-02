@@ -654,7 +654,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mt-4 pt-5">
+    <div className="container-fluid mt-4 pt-5 px-4">
       <h1 className="mb-4">Tableau de bord</h1>
       {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
       {success && <div className="alert alert-success mt-3" role="alert">{success}</div>}

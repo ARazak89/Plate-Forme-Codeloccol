@@ -292,7 +292,9 @@ const Layout = ({ children }) => {
 
         {/* Main Content */}
         <main className="col-md-9 ms-sm-auto col-lg-10 px-md-4 h-100 overflow-auto pt-5">
-          {children}
+          <div className="container-fluid">
+            {children}
+          </div>
         </main>
       </div>
       <footer className="footer mt-auto py-3 bg-dark text-white text-center shadow-lg">
