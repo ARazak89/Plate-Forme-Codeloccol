@@ -577,51 +577,37 @@ function ProjectsPage() {
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="card-body d-flex flex-column">
-                  <div>
+                    <div>
                       <h5 className="card-title text-primary mb-2">
                         <i className="bi bi-folder-check me-2"></i> {project.title}
                       </h5>
-                      <p className="card-text text-muted flex-grow-1">{project.description}</p>
+                      {project.templateProject && project.templateProject.order && (
+                        <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
+                      )}
                     </div>
 
                     {/* Indicateur de statut avec icône */}
-                      <div className="mt-3 mb-3 d-flex align-items-center">
+                    <div className="mt-3 mb-3 d-flex align-items-center">
                       <span className={`badge rounded-pill bg-${
-                        project.status === 'assigned' ? 'warning text-dark' : 
-                        project.status === 'pending' ? 'info' : 
+                        project.status === 'assigned' ? 'warning text-dark' :
+                        project.status === 'pending' ? 'info' :
                         'success'
                       } me-2`}>
                         <i className={`bi bi-${
-                          project.status === 'assigned' ? 'clock' : 
-                          project.status === 'pending' ? 'hourglass-split' : 
+                          project.status === 'assigned' ? 'clock' :
+                          project.status === 'pending' ? 'hourglass-split' :
                           'check-circle'
                         } me-1`}></i>
-                        {project.status === 'assigned' ? 'Assigné' : 
-                         project.status === 'pending' ? 'En cours d\'évaluation' : 
+                        {project.status === 'assigned' ? 'Assigné' :
+                         project.status === 'pending' ? 'En cours d\'évaluation' :
                          'Approuvé'}
-                    </span>
+                      </span>
                       
                       {/* Message spécial pour les projets approuvés */}
                       {project.status === 'approved' && (
-                          <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
+                        <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
                       )}
-                </div>
-                    
-                    {/* Dépôt GitHub - toujours visible si disponible */}
-                    {project.repoUrl && (
-                      <div className="mt-auto mb-2">
-                        <a 
-                          href={project.repoUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="btn btn-outline-dark w-100 btn-sm"
-                          onClick={(e) => e.stopPropagation()} // Empêcher l'ouverture de la modale
-                        >
-                          <i className="bi bi-github me-2"></i>
-                          Voir le Dépôt GitHub
-                        </a>
-                      </div>
-                    )}
+                    </div>
 
                     {/* Bouton de soumission pour les projets assignés */}
                     {project.status === 'assigned' && (
@@ -688,8 +674,19 @@ function ProjectsPage() {
                       </div>
                     )}
 
-                    <p className="d-flex align-items-center"><i className="bi bi-journal-text me-2 text-muted"></i><strong>Description:</strong> {selectedProject.description}</p>
-                    {selectedProject.specifications && <p className="d-flex align-items-center"><i className="bi bi-file-earmark-text me-2 text-muted"></i><strong>Spécifications:</strong> {selectedProject.specifications}</p>}
+                    <p className="d-flex align-items-center mb-1"><i className="bi bi-journal-text me-2 text-muted"></i><strong>Description:</strong> {selectedProject.description}</p>
+                    {selectedProject.specifications && selectedProject.specifications.length > 0 && (
+                      <div className="mb-3">
+                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Spécifications</h6>
+                        <ul className="list-group list-group-flush border-top pt-2">
+                          {selectedProject.specifications.map((spec, index) => (
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {spec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     
                     {/* Statut avec icône */}
                     <div className="mb-3 d-flex align-items-center">
@@ -701,7 +698,7 @@ function ProjectsPage() {
                     </div>
                     
                     {selectedProject.submissionDate && (
-                      <p className="d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i><strong>Date de Soumission:</strong> {new Date(selectedProject.submissionDate).toLocaleDateString('fr-FR', {
+                      <p className="d-flex align-items-center mb-1"><i className="bi bi-calendar-event me-2 text-muted"></i><strong>Date de Soumission:</strong> {new Date(selectedProject.submissionDate).toLocaleDateString('fr-FR', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',

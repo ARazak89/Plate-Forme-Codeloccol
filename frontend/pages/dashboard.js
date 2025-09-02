@@ -839,13 +839,13 @@ export default function Dashboard() {
                               <small className="text-muted ms-2">(Projet {project.templateProject.order})</small>
                             )}
                           </h5>
-                          <p className="card-text mb-1 text-muted d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Description: {project.description}</p>
+                          {/* <p className="card-text mb-1 text-muted d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Description: {project.description}</p> */}
                         </div>
-                        {project.repoUrl && (
+                        {/* {project.repoUrl && (
                           <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm d-flex align-items-center mt-2 mt-md-0">
                             <i className="bi bi-github me-2"></i> Voir le Dépôt GitHub
                           </a>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   ))}
