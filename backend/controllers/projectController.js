@@ -23,6 +23,7 @@ export async function createProject(req, res) {
       size = 'short',
       order,
       exerciseStatements, // Ajout du champ exerciseStatements
+      resourceLinks, // Ajout du champ resourceLinks
     } = req.body;
 
     // Basic validation for template creation
@@ -44,6 +45,7 @@ export async function createProject(req, res) {
       status: 'template', // Le statut doit être 'template' pour les modèles de projet
       order, // Inclure l'ordre
       exerciseStatements, // Inclure les énoncés d'exercice
+      resourceLinks, // Inclure les liens de ressources
       // student: null, // No student assigned initially
       // repoUrl: null, // No repo URL initially
     });
@@ -394,6 +396,7 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
         specifications: nextProjectTemplate.specifications,
         demoVideoUrl: nextProjectTemplate.demoVideoUrl,
         exerciseStatements: nextProjectTemplate.exerciseStatements, // Inclure les énoncés d'exercice
+        resourceLinks: nextProjectTemplate.resourceLinks, // Inclure les liens de ressources
         size: nextProjectTemplate.size,
         student: student._id,
         status: 'assigned',
@@ -486,7 +489,7 @@ export async function submitPeerEvaluation(req, res) {
 export async function updateProject(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, repoUrl, size, peerEvaluators, exerciseStatements } = req.body; // Ajout de exerciseStatements
+    const { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks } = req.body; // Ajout de resourceLinks
 
     const project = await Project.findById(id);
     if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
@@ -508,7 +511,7 @@ export async function updateProject(req, res) {
 
     const updatedProject = await Project.findByIdAndUpdate(
       id,
-      { title, description, repoUrl, size, peerEvaluators, exerciseStatements }, // Inclure exerciseStatements
+      { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks }, // Inclure resourceLinks
       { new: true, runValidators: true },
     );
 

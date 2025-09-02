@@ -28,6 +28,7 @@ function ProjectsPage() {
   const [projectSpecifications, setProjectSpecifications] = useState('');
   const [projectSize, setProjectSize] = useState('short');
   const [projectExerciseStatements, setProjectExerciseStatements] = useState(''); // Nouvel état pour les énoncés d'exercice
+  const [projectResourceLinks, setProjectResourceLinks] = useState(''); // Nouvel état pour les liens de ressources
   
   // États pour la soumission de projet par un apprenant
   const [showSubmitProjectModal, setShowSubmitProjectModal] = useState(false);
@@ -199,6 +200,7 @@ function ProjectsPage() {
         setProjectSpecifications('');
         setProjectSize('short');
         setProjectExerciseStatements(''); // Réinitialiser
+        setProjectResourceLinks(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de l\'ajout du projet.');
@@ -220,6 +222,7 @@ function ProjectsPage() {
     setProjectSpecifications(project.specifications || '');
     setProjectSize(project.size || 'short');
     setProjectExerciseStatements(project.exerciseStatements ? project.exerciseStatements.join('\n') : ''); // Joindre pour l'édition
+    setProjectResourceLinks(project.resourceLinks ? project.resourceLinks.join('\n') : ''); // Joindre pour l'édition
     setShowEditProjectModal(true);
   };
 
@@ -246,7 +249,8 @@ function ProjectsPage() {
           demoVideoUrl: projectDemoVideoUrl, 
           specifications: projectSpecifications, 
           size: projectSize, 
-          exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== '') // Inclure les énoncés d'exercice
+          exerciseStatements: projectExerciseStatements.split('\n').filter(s => s.trim() !== ''), 
+          resourceLinks: projectResourceLinks.split('\n').filter(s => s.trim() !== '') // Inclure les liens de ressources
         }),
       });
       const data = await res.json();
@@ -262,6 +266,7 @@ function ProjectsPage() {
         setProjectSpecifications('');
         setProjectSize('short');
         setProjectExerciseStatements(''); // Réinitialiser
+        setProjectResourceLinks(''); // Réinitialiser
         loadData(); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
@@ -792,6 +797,20 @@ function ProjectsPage() {
                     </div>
                   )}
 
+                  {/* Champ pour les liens de ressources */}
+                  <div className="mb-3">
+                    <label htmlFor="projectResourceLinks" className="form-label">Liens de Ressources (un par ligne, Optionnel)</label>
+                    <textarea
+                      className="form-control"
+                      id="projectResourceLinks"
+                      rows="3"
+                      value={projectResourceLinks}
+                      onChange={(e) => setProjectResourceLinks(e.target.value)}
+                      placeholder="Entrez chaque lien de ressource sur une nouvelle ligne (ex: https://example.com/doc.pdf)"
+                    ></textarea>
+                    <div className="form-text text-muted">Fournissez des liens vers des documentations, tutoriels, ou autres ressources utiles.</div>
+                  </div>
+
                   <button type="submit" className="btn btn-success mt-3">{currentProjectToEdit ? 'Modifier' : 'Ajouter'} le Projet</button>
                 </form>
               </div>
@@ -871,6 +890,19 @@ function ProjectsPage() {
                         {currentProjectToSubmit.exerciseStatements.map((statement, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {currentProjectToSubmit.resourceLinks && currentProjectToSubmit.resourceLinks.length > 0 && (
+                    <div className="mt-3">
+                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
+                      <ul className="list-group list-group-flush border-top pt-2">
+                        {currentProjectToSubmit.resourceLinks.map((link, index) => (
+                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                            <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
+                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
                           </li>
                         ))}
                       </ul>
