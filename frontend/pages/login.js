@@ -14,7 +14,7 @@ export default function Login() {
     e.preventDefault();
     setError(null); // Réinitialiser l'erreur à chaque soumission
     try {
-      const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email, password })});
+      const r = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email, password })});
       const data = await r.json();
       if (data.token) {
         localStorage.setItem('token', data.token);
