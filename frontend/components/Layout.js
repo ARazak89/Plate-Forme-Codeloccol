@@ -36,7 +36,7 @@ const Layout = ({ children }) => {
     if (token) {
       const fetchUserData = async () => {
         try {
-          const res = await fetch(`${API}/users/me`, {
+          const res = await fetch(`${API}/api/users/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (!res.ok) {
@@ -59,7 +59,7 @@ const Layout = ({ children }) => {
 
       const fetchNotifications = async () => { // Renommé et adapté pour récupérer toutes les notifications
         try {
-          const res = await fetch(`${API}/notifications/mine`, {
+          const res = await fetch(`${API}/api/notifications/mine`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (!res.ok) throw new Error('Failed to fetch notifications');
