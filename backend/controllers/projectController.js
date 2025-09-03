@@ -394,6 +394,7 @@ async function _createEvaluationsAndNotifications(
   for (const slot of slots) {
     await Evaluation.create({
       project: projectId,
+      assignment: assignmentId, // Ajouter l'ID de l'assignation ici
       student: studentId,
       evaluator: slot.evaluator._id,
       slot: slot._id,
