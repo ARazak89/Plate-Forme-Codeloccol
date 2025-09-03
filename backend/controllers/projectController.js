@@ -502,14 +502,12 @@ export async function updateProject(req, res) {
     }
     console.log(`[updateProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
-    // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
-    if (
-      !project.student || // Si le projet n'a pas d'étudiant assigné (c'est un modèle)
-      (project.student && !project.student.equals(req.user._id) && // Ou si l'utilisateur n'est pas l'étudiant assigné
-        req.user.role !== 'staff' &&
-        req.user.role !== 'admin')
-    ) {
-      console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}`);
+    // Vérifier si l'utilisateur est un membre du personnel/admin OU le propriétaire du projet
+    const isStaffOrAdmin = req.user.role === 'staff' || req.user.role === 'admin';
+    const isOwner = project.student && project.student.equals(req.user._id);
+
+    if (!isStaffOrAdmin && !isOwner) {
+      console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}. IsStaffOrAdmin: ${isStaffOrAdmin}, IsOwner: ${isOwner}`);
       return res
         .status(403)
         .json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet.' });
@@ -544,14 +542,12 @@ export async function deleteProject(req, res) {
     }
     console.log(`[deleteProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
-    // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
-    if (
-      !project.student || // Si le projet n'a pas d'étudiant assigné (c'est un modèle)
-      (project.student && !project.student.equals(req.user._id) && // Ou si l'utilisateur n'est pas l'étudiant assigné
-        req.user.role !== 'staff' &&
-        req.user.role !== 'admin')
-    ) {
-      console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}`);
+    // Vérifier si l'utilisateur est un membre du personnel/admin OU le propriétaire du projet
+    const isStaffOrAdmin = req.user.role === 'staff' || req.user.role === 'admin';
+    const isOwner = project.student && project.student.equals(req.user._id);
+
+    if (!isStaffOrAdmin && !isOwner) {
+      console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}. IsStaffOrAdmin: ${isStaffOrAdmin}, IsOwner: ${isOwner}`);
       return res
         .status(403)
         .json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet.' });
