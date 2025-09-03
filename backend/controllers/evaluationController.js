@@ -63,7 +63,13 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
       evaluator: evaluatorId,
       status: "pending",
     })
-      .populate("project") // Populate the entire project to access its assignments
+      .populate({
+        path: "project",
+        populate: {
+          path: "assignments.student", // Peupler l'étudiant dans l'assignation
+          select: "name email",
+        },
+      })
       // .populate("student", "name") // Student will be populated via assignment
       .populate({
         path: "slot",
@@ -101,7 +107,7 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
           status: assignment.status,
           repoUrl: assignment.repoUrl,
           submissionDate: assignment.submissionDate,
-          student: assignment.student, // Include student details from assignment
+          student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Inclure les détails de l'étudiant peuplés
           // Add other assignment fields as needed
         },
         studentName: assignment.student ? assignment.student.name : 'N/A', // Pour compatibilité frontend
