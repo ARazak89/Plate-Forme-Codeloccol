@@ -75,8 +75,6 @@ export async function listMyProjects(req, res) {
     })
     .populate('templateProject', 'title order');
 
-  console.log("[DEBUG - listMyProjects] Raw myAssignedProjects:", JSON.stringify(myAssignedProjects, null, 2));
-
   // 2. Trouver les projets où l'utilisateur est un évaluateur désigné via les évaluations en attente
   const evaluationsToComplete = await Evaluation.find({
     evaluator: studentId,
@@ -94,8 +92,6 @@ export async function listMyProjects(req, res) {
       path: 'assignment',
       select: 'status submissionDate repoUrl',
     });
-
-  console.log("[DEBUG - listMyProjects] Raw evaluationsToComplete:", JSON.stringify(evaluationsToComplete, null, 2));
 
   // Traiter les projets assignés pour l'utilisateur
   const formattedMyProjects = myAssignedProjects.flatMap(project => {
@@ -376,20 +372,20 @@ export async function approveProject(req, res) {
     const student = await User.findById(assignment.student);
     if (student) {
       student.daysRemaining += DAY_BONUS[project.size] || 1; // Utiliser la taille du projet maître
-      student.level = Math.max(student.level, 1) + 1;
-      
-      // Incrémenter le nombre total de projets complétés
-      student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1;
+    student.level = Math.max(student.level, 1) + 1;
+    
+    // Incrémenter le nombre total de projets complétés
+    student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1;
 
-      // Logique pour attribuer des badges (Exemples)
-      await _handleBadgeAttribution(student); // Appeler la fonction d'aide
+    // Logique pour attribuer des badges (Exemples)
+    await _handleBadgeAttribution(student); // Appeler la fonction d'aide
 
-      // Logique pour assigner le projet suivant
-      // 1. Trouver le projet template actuel utilisé par le projet qui vient d'être approuvé
+    // Logique pour assigner le projet suivant
+    // 1. Trouver le projet template actuel utilisé par le projet qui vient d'être approuvé
       // Le currentProjectTemplate est le projet maître lui-même
       await _assignNextProjectToStudent(student, project);
 
-      await student.save();
+    await student.save();
     }
     
     // Notifier l'étudiant du résultat de l'évaluation finale
@@ -878,7 +874,7 @@ export async function assignProjectToStudent(req, res) {
     // Ajouter une référence au projet maître dans les projets de l'étudiant si elle n'est pas déjà présente
     if (!student.projects.includes(projectTemplate._id)) {
       student.projects.push(projectTemplate._id);
-      await student.save();
+    await student.save();
     }
 
     // Notifier l'étudiant qu'un nouveau projet lui a été assigné

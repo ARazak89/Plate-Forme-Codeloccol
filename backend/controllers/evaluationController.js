@@ -81,6 +81,8 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
       })
       .sort("slot.startTime");
 
+    console.log("[DEBUG - getPendingEvaluationsAsEvaluator] Raw evaluations:", JSON.stringify(evaluations, null, 2));
+
     const formattedEvaluations = evaluations.map(evalItem => {
       const project = evalItem.project;
       if (!project) return evalItem; // Handle case where project might be null
