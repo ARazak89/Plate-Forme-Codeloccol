@@ -892,7 +892,7 @@ export default function Dashboard() {
                             <h5 className="mb-1 text-info"><i className="bi bi-calendar-check me-2"></i> Projet: {evaluation.project.title}</h5>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationStartTime.toLocaleDateString()} de {evaluationStartTime.toLocaleTimeString()} à {evaluationEndTime.toLocaleTimeString()}</small>
-                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small>
+                            {/* <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small> */}
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'evaluation.project.repoUrl'}</a></small>
                         </div>
                         <button
