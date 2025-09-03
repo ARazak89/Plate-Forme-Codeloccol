@@ -81,8 +81,6 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
       })
       .sort("slot.startTime");
 
-    console.log("[DEBUG - getPendingEvaluationsAsEvaluator] Raw evaluations:", JSON.stringify(evaluations, null, 2));
-
     const formattedEvaluations = evaluations.map(evalItem => {
       const project = evalItem.project;
       if (!project) return evalItem; // Handle case where project might be null
@@ -310,6 +308,38 @@ export async function submitEvaluation(req, res) {
       .json({ message: "Évaluation soumise avec succès.", evaluation });
   } catch (e) {
     console.error('Error submitting evaluation:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// Fonction de débogage pour lister toutes les évaluations
+export async function debugListAllEvaluations(req, res) {
+  try {
+    // Seuls le staff et les administrateurs peuvent voir cette liste
+    if (req.user.role !== "staff" && req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ error: "Non autorisé à consulter cette ressource." });
+    }
+
+    const evaluations = await Evaluation.find({})
+      .populate({
+        path: "project",
+        select: "title assignments",
+        populate: {
+          path: "assignments.student",
+          select: "name email",
+        },
+      })
+      .populate("evaluator", "name email")
+      .populate("student", "name email") // L'étudiant qui a soumis le projet
+      .populate("assignment", "status submissionDate repoUrl") // Directement le sous-document de l'assignation
+      .populate("slot", "startTime endTime bookedByStudent bookedForProject bookedForAssignment")
+      .sort("-createdAt");
+
+    res.status(200).json(evaluations);
+  } catch (e) {
+    console.error('Error fetching all evaluations for debug:', e);
     res.status(500).json({ error: e.message });
   }
 }
