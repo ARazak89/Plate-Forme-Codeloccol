@@ -657,7 +657,7 @@ function ProjectsPage() {
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header bg-gradient bg-primary text-white">
-                <h5 className="modal-title">Détails du Projet: {selectedProject.title}</h5>
+                <h5 className="modal-title d-flex align-items-center"><i className="bi bi-folder-check me-2"></i> Détails du Projet: {selectedProject.title}</h5>
                 <button type="button" className="btn-close" onClick={handleCloseModal}></button>
               </div>
               <div className="modal-body">
@@ -678,78 +678,101 @@ function ProjectsPage() {
                   <div className="col-md-8">
                     <h6 className="text-primary mb-3">Informations du Projet</h6>
                     
+                    {/* Section Description */}
+                    <div className="card mb-3 shadow-sm">
+                      <div className="card-body">
+                        <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-journal-text me-2"></i> Description</h6>
+                        <p className="card-text">{selectedProject.description}</p>
+                      </div>
+                    </div>
+
                     {/* Objectives */}
                     {selectedProject.objectives && (selectedProject.objectives || []).length > 0 && (
-                      <div className="mb-3">
-                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
-                        <ul className="list-group list-group-flush border-top pt-2">
-                          {(selectedProject.objectives || []).map((objective, index) => (
-                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body">
+                          <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
+                          <ul className="list-group list-group-flush">
+                            {(selectedProject.objectives || []).map((objective, index) => (
+                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                                <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     )}
 
-                    <p className="d-flex align-items-center mb-1"><i className="bi bi-journal-text me-2 text-muted"></i><strong>Description:</strong> {selectedProject.description}</p>
+                    {/* Spécifications */}
                     {selectedProject.specifications && (selectedProject.specifications || []).length > 0 && (
-                      <div className="mb-3">
-                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Spécifications</h6>
-                        <ul className="list-group list-group-flush border-top pt-2">
-                          {(selectedProject.specifications || []).map((spec, index) => (
-                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {spec}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body">
+                          <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-file-earmark-text me-2"></i> Spécifications</h6>
+                          <ul className="list-group list-group-flush">
+                            {(selectedProject.specifications || []).map((spec, index) => (
+                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                                <i className="bi bi-check-lg text-success me-2 mt-1"></i> {spec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     )}
                     
                     {/* Statut avec icône */}
-                    <div className="mb-3 d-flex align-items-center">
-                      <strong>Statut:</strong> 
-                      <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'} ms-2`}>
-                        <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
-                        {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
-                      </span>
+                    <div className="card mb-3 shadow-sm">
+                      <div className="card-body d-flex align-items-center">
+                        <h6 className="mb-0 me-2 text-primary"><i className="bi bi-info-circle me-2"></i> Statut:</h6> 
+                        <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'}`}>
+                          <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
+                          {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
+                        </span>
+                      </div>
                     </div>
                     
                     {selectedProject.submissionDate && (
-                      <p className="d-flex align-items-center mb-1"><i className="bi bi-calendar-event me-2 text-muted"></i><strong>Date de Soumission:</strong> {new Date(selectedProject.submissionDate).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</p>
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body d-flex align-items-center">
+                          <h6 className="mb-0 me-2 text-primary"><i className="bi bi-calendar-event me-2"></i> Date de Soumission:</h6> 
+                          <span className="text-muted">{new Date(selectedProject.submissionDate).toLocaleDateString('fr-FR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
+                      </div>
                     )}
 
                     {/* Resource Links */}
                     {selectedProject.resourceLinks && (selectedProject.resourceLinks || []).length > 0 && (
-                      <div className="mt-3">
-                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
-                        <ul className="list-group list-group-flush border-top pt-2">
-                          {(selectedProject.resourceLinks || []).map((link, index) => (
-                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                              <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
-                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body">
+                          <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
+                          <ul className="list-group list-group-flush">
+                            {(selectedProject.resourceLinks || []).map((link, index) => (
+                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                                <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
+                                <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     )}
 
                     {selectedProject.exerciseStatements && (selectedProject.exerciseStatements || []).length > 0 && (
-                      <div className="mt-3">
-                        <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
-                        <ul className="list-group list-group-flush border-top pt-2">
-                          {(selectedProject.exerciseStatements || []).map((statement, index) => (
-                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body">
+                          <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
+                          <ul className="list-group list-group-flush">
+                            {(selectedProject.exerciseStatements || []).map((statement, index) => (
+                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                                <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     )}
 
@@ -765,9 +788,9 @@ function ProjectsPage() {
                           href={selectedProject.repoUrl} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="btn btn-dark w-100 d-flex align-items-center justify-content-center"
+                          className="btn btn-dark w-100 d-flex align-items-center justify-content-center py-2"
                         >
-                          <i className="bi bi-github me-2"></i>
+                          <i className="bi bi-github me-2 fs-5"></i>
                           Voir le Dépôt GitHub
                         </a>
                       </div>
@@ -780,9 +803,9 @@ function ProjectsPage() {
                           href={selectedProject.demoVideoUrl} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+                          className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-2"
                         >
-                          <i className="bi bi-play-circle me-2"></i>
+                          <i className="bi bi-play-circle me-2 fs-5"></i>
                           Voir la Vidéo de Démo
                         </a>
                       </div>
