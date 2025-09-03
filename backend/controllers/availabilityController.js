@@ -228,8 +228,6 @@ export async function getAvailableSlotsForProject(req, res) {
       'assignments.student': studentId // S'assurer que c'est l'assignation de cet étudiant
     }).populate('assignments.student');
 
-    console.log(`[getAvailableSlotsForProject] Project found by assignmentId and studentId: ${project ? project._id : 'null'}`);
-
     if (!project) {
       return res.status(404).json({
         error: 'Assignation de projet non trouvée, ou non assignée à cet étudiant.'
@@ -238,19 +236,16 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Vérifier que le projectId fourni dans l'URL correspond bien à l'_id du projet maître trouvé
     if (project._id.toString() !== projectId) {
-      console.warn(`[getAvailableSlotsForProject] Inconsistency: Project._id (${project._id}) !== URL projectId (${projectId}). Returning 400.`);
       return res.status(400).json({ error: 'Incohérence entre projectId et assignmentId.' });
     }
 
     const relevantAssignment = project.assignments.id(assignmentId);
 
     if (!relevantAssignment) {
-        console.warn(`[getAvailableSlotsForProject] Relevant assignment not found within project ${project._id} for assignmentId ${assignmentId}. Returning 404.`);
         return res.status(404).json({ error: 'Assignation de projet non trouvée.' });
     }
 
     if (relevantAssignment.status === 'approved' || relevantAssignment.status === 'rejected') {
-      console.warn(`[getAvailableSlotsForProject] Assignment ${assignmentId} for project ${projectId} has status '${relevantAssignment.status}'. Returning 400.`);
       return res.status(400).json({
         error: 'Cette assignation de projet a déjà été évaluée.'
       });
@@ -268,6 +263,11 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Grouper les slots par évaluateur pour vérifier qu'il y a au moins 2 évaluateurs différents
     const slotsByEvaluator = availableSlots.reduce((acc, slot) => {
+      // S'assurer que slot.evaluator n'est pas null avant d'accéder à ses propriétés
+      if (!slot.evaluator) {
+        console.warn(`Slot ${slot._id} has a null evaluator. Skipping.`);
+        return acc; // Ignorer ce slot ou le gérer autrement si nécessaire
+      }
       const evaluatorId = slot.evaluator._id.toString();
       if (!acc[evaluatorId]) {
         acc[evaluatorId] = {
@@ -293,10 +293,13 @@ export async function getAvailableSlotsForProject(req, res) {
       _id: slot._id,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      evaluator: {
+      evaluator: slot.evaluator ? {
         _id: slot.evaluator._id,
         name: slot.evaluator.name
-      }
+      } : {
+        _id: null,
+        name: 'Évaluateur Inconnu'
+      } // Gérer le cas où l'évaluateur est null
     }));
 
     res.status(200).json(slotsWithEvaluatorInfo);
