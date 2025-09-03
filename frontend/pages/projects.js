@@ -107,7 +107,9 @@ function ProjectsPage() {
             if (assignment) {
               return {
                 ...sanitizedProject, // Détails du projet maître
+                projectId: sanitizedProject._id, // Stocker l'ID du projet maître séparément
                 ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
+                _id: assignment._id, // L'ID principal de l'objet pour React key et autres utilisations sera l'ID de l'assignation
                 assignmentId: assignment._id, // Ajouter l'ID de l'assignation pour faciliter l'utilisation
                 student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Références directes pour compatibilité UI
                 evaluations: (assignment.evaluations || []).map(evalItem => ({
