@@ -220,11 +220,15 @@ export async function getAvailableSlotsForProject(req, res) {
     const { projectId, assignmentId } = req.params; // projectId est ici l'ID du projet maître
     const studentId = req.user._id;
 
+    console.log(`[getAvailableSlotsForProject] Received - ProjectId: ${projectId}, AssignmentId: ${assignmentId}, StudentId: ${studentId}`);
+
     // Trouver le projet maître qui contient l'assignation avec l'assignmentId donné
     const project = await Project.findOne({
       'assignments._id': assignmentId, // Chercher l'assignation par son ID dans le tableau
       'assignments.student': studentId // S'assurer que c'est l'assignation de cet étudiant
     }).populate('assignments.student');
+
+    console.log(`[getAvailableSlotsForProject] Project found by assignmentId and studentId: ${project ? project._id : 'null'}`);
 
     if (!project) {
       return res.status(404).json({
@@ -234,16 +238,19 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Vérifier que le projectId fourni dans l'URL correspond bien à l'_id du projet maître trouvé
     if (project._id.toString() !== projectId) {
+      console.warn(`[getAvailableSlotsForProject] Inconsistency: Project._id (${project._id}) !== URL projectId (${projectId}). Returning 400.`);
       return res.status(400).json({ error: 'Incohérence entre projectId et assignmentId.' });
     }
 
     const relevantAssignment = project.assignments.id(assignmentId);
 
     if (!relevantAssignment) {
+        console.warn(`[getAvailableSlotsForProject] Relevant assignment not found within project ${project._id} for assignmentId ${assignmentId}. Returning 404.`);
         return res.status(404).json({ error: 'Assignation de projet non trouvée.' });
     }
 
     if (relevantAssignment.status === 'approved' || relevantAssignment.status === 'rejected') {
+      console.warn(`[getAvailableSlotsForProject] Assignment ${assignmentId} for project ${projectId} has status '${relevantAssignment.status}'. Returning 400.`);
       return res.status(400).json({
         error: 'Cette assignation de projet a déjà été évaluée.'
       });
