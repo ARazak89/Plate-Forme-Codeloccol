@@ -227,6 +227,7 @@ export async function getAvailableSlotsForProject(req, res) {
       path: 'assignments.student',
       select: 'name'
     });
+    console.log(`[getAvailableSlotsForProject] Fetched Project:`, project);
 
     if (!project) {
       return res.status(404).json({
@@ -236,6 +237,7 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Trouver l'assignation pertinente dans le projet
     const relevantAssignment = project.assignments.id(assignmentId);
+    console.log(`[getAvailableSlotsForProject] Relevant Assignment:`, relevantAssignment);
 
     if (!relevantAssignment || !relevantAssignment.student.equals(studentId)) {
       return res.status(404).json({
@@ -258,6 +260,7 @@ export async function getAvailableSlotsForProject(req, res) {
     })
     .populate('evaluator', 'name') // Populer le nom de l'évaluateur
     .sort('startTime');
+    console.log(`[getAvailableSlotsForProject] Available Slots before grouping:`, availableSlots);
 
     // Grouper les slots par évaluateur pour vérifier qu'il y a au moins 2 évaluateurs différents
     const slotsByEvaluator = availableSlots.reduce((acc, slot) => {
@@ -280,6 +283,7 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Convertir en tableau et s'assurer qu'il y a au moins 2 évaluateurs différents
     const evaluatorsWithSlots = Object.values(slotsByEvaluator);
+    console.log(`[getAvailableSlotsForProject] Evaluators with Slots:`, evaluatorsWithSlots);
 
     if (evaluatorsWithSlots.length < 2) {
       return res.status(400).json({
@@ -299,6 +303,7 @@ export async function getAvailableSlotsForProject(req, res) {
         name: 'Évaluateur Inconnu'
       } // Gérer le cas où l'évaluateur est null
     }));
+    console.log(`[getAvailableSlotsForProject] Final Slots to send:`, slotsWithEvaluatorInfo);
 
     res.status(200).json(slotsWithEvaluatorInfo);
   } catch (e) {
