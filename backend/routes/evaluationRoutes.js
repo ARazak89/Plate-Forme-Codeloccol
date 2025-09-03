@@ -4,7 +4,6 @@ import {
   getPendingEvaluationsAsEvaluator,
   submitEvaluation,
   getAllPendingEvaluationsForStaff, // Importez la nouvelle fonction
-  debugListAllEvaluations, // Importez la nouvelle fonction de débogage
 } from "../controllers/evaluationController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 
@@ -28,12 +27,6 @@ r.get(
   requireRole(["staff", "admin"]),
   getAllPendingEvaluationsForStaff,
 );
-r.get(
-  "/debug-all", // Nouvelle route de débogage
-  requireAuth,
-  requireRole(["staff", "admin"]),
-  debugListAllEvaluations,
-); // Limiter l'accès au staff/admin pour le débogage
 r.post(
   "/:evaluationId/submit",
   requireAuth,

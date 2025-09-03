@@ -142,9 +142,8 @@ export default function Dashboard() {
           const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMyProjects(myAssignedProjects);
-          setEvaluationsAsEvaluator(prev => [...prev, ...projectsToEvaluateAsApprenant]); // Ajouter aux évaluations existantes
-          console.log("Dashboard - My Assigned Projects (myProjects):", myAssignedProjects);
-          console.log("Dashboard - Projects To Evaluate (from my-projects):", projectsToEvaluateAsApprenant);
+          console.log("Dashboard - My Projects (Learner View):", myAssignedProjects.map(p => ({ title: p.title, status: p.status })));
+          setEvaluationsAsEvaluator(projectsToEvaluateAsApprenant); // Ajouter aux évaluations existantes
 
         } else {
           const errorData = await myProjectsRes.json();
@@ -160,7 +159,6 @@ export default function Dashboard() {
         // Nous allons remplacer complètement l'état evaluationsAsEvaluator avec les nouvelles données
         setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
-        console.log("Dashboard - Evaluations As Evaluator (from API):", evalAsEvaluatorData);
       } else {
         const errorData = await evalAsEvaluatorRes.json();
         throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
@@ -655,10 +653,10 @@ export default function Dashboard() {
       {me && (
         <div className="row mb-4">
           <div className="col-md-6 col-lg-4 mb-3">
-            <UserSummaryCard
-              me={me}
-              onShowCreateSlotModal={() => setShowCreateSlotModal(true)}
-              onShowAddUserModal={() => setShowAddUserModal(true)}
+            <UserSummaryCard 
+              me={me} 
+              onShowCreateSlotModal={() => setShowCreateSlotModal(true)} 
+              onShowAddUserModal={() => setShowAddUserModal(true)} 
             />
           </div>
           <div className="col-md-6 col-lg-8 mb-3">
@@ -738,11 +736,11 @@ export default function Dashboard() {
                         </div>
                       </div>
                     ))}
-                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
       )}
 
       {/* Section pour tous les projets assignés à l'apprenant */}
@@ -944,7 +942,7 @@ export default function Dashboard() {
                                 const evaluationTime = new Date(evalItem.slot.endTime); // Heure de fin du slot
                                 const submissionTime = evalItem.submissionDate ? new Date(evalItem.submissionDate) : null;
                                 const gracePeriodEnd = new Date(evaluationTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
-
+                                
                                 let statusText = 'En attente';
                                 let statusBadgeClass = 'bg-warning';
                                 let timeStatus = 'N/A';
@@ -1078,7 +1076,7 @@ export default function Dashboard() {
                               )}
                             </td>
                             <td className="text-center">
-                              <button
+                              <button 
                                 className="btn btn-sm btn-outline-secondary py-0 px-1"
                                 onClick={() => {
                                   const newExpandedLearners = { ...expandedLearners };
@@ -1098,25 +1096,25 @@ export default function Dashboard() {
                             </td>
                           </tr>
                           {expandedLearners[learner._id] && (
-                          <tr>
-                            <td colSpan="6" className="p-0 border-0">
-                              <div className="collapse show" id={`learner-details-${learner._id}`}>
-                                <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
-                                  <h6 className="text-primary mb-2">Détails du Projet Assigné:</h6>
-                                  {learner.assignedProject ? (
-                                    <>
-                                      <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
+                            <tr>
+                              <td colSpan="6" className="p-0 border-0">
+                                <div className="collapse show" id={`learner-details-${learner._id}`}>
+                                  <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
+                                    <h6 className="text-primary mb-2">Détails du Projet Assigné:</h6>
+                                    {learner.assignedProject ? (
+                                      <>
+                                        <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
                                       <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: <span className={`badge bg-${learner.assignedProject.status === 'info' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'} ms-1`}>{learner.assignedProject.status}</span></p>
-                                      {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
-                                      {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
-                                    </>
-                                  ) : (
-                                    <p className="text-muted d-flex align-items-center"><i className="bi bi-x-circle me-2"></i> Aucun projet actuellement assigné.</p>
-                                  )}
+                                        {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
+                                        {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
+                                      </>
+                                    ) : (
+                                      <p className="text-muted d-flex align-items-center"><i className="bi bi-x-circle me-2"></i> Aucun projet actuellement assigné.</p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
+                              </td>
+                            </tr>
                           )}
                         </React.Fragment>
                       ))}
@@ -1141,9 +1139,9 @@ export default function Dashboard() {
                   <button className="btn btn-light btn-sm me-2" onClick={() => router.push('/hackathons')}>
                     <i className="bi bi-lightbulb me-1"></i> Gérer les Hackathons
                   </button>
-                  <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
-                    <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
-                  </button>
+                <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
+                  <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
+                </button>
                 </div>
               </div>
               <div className="card-body">
@@ -1366,9 +1364,9 @@ export default function Dashboard() {
                     </>
                   )}
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-success d-flex align-items-center"
+                <button 
+                  type="button" 
+                  className="btn btn-success d-flex align-items-center" 
                   onClick={() => handleSubmitFeedback('accepted')}
                   disabled={isLoading || Object.values(feedback).some(value => value.trim() === '')}
                 >
