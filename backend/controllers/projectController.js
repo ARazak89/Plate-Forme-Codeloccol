@@ -494,8 +494,13 @@ export async function updateProject(req, res) {
     const { id } = req.params;
     const { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks, objectives } = req.body; // Ajout de objectives
 
+    console.log(`[updateProject] Tentative de modification du projet avec ID: ${id} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
     const project = await Project.findById(id);
-    if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
+    if (!project) {
+      console.warn(`[updateProject] Projet non trouvé pour l\'ID: ${id}`);
+      return res.status(404).json({ error: 'Projet non trouvé.' });
+    }
+    console.log(`[updateProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
     if (
@@ -504,6 +509,7 @@ export async function updateProject(req, res) {
         req.user.role !== 'staff' &&
         req.user.role !== 'admin')
     ) {
+      console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}`);
       return res
         .status(403)
         .json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet.' });
@@ -511,7 +517,8 @@ export async function updateProject(req, res) {
 
     if (repoUrl && !validateGithubUrl(repoUrl))
       return res.status(400).json({ error: 'URL GitHub invalide' });
-
+    
+    console.log(`[updateProject] Autorisation accordée. Mise à jour du projet ${project.title}`);
     const updatedProject = await Project.findByIdAndUpdate(
       id,
       { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks, objectives }, // Inclure objectives
@@ -520,6 +527,7 @@ export async function updateProject(req, res) {
 
     res.json(updatedProject);
   } catch (e) {
+    console.error("Error in updateProject:", e);
     res.status(500).json({ error: e.message });
   }
 }
@@ -528,8 +536,13 @@ export async function deleteProject(req, res) {
   try {
     const { id } = req.params;
 
+    console.log(`[deleteProject] Tentative de suppression du projet avec ID: ${id} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
     const project = await Project.findById(id);
-    if (!project) return res.status(404).json({ error: 'Projet non trouvé.' });
+    if (!project) {
+      console.warn(`[deleteProject] Projet non trouvé pour l\'ID: ${id}`);
+      return res.status(404).json({ error: 'Projet non trouvé.' });
+    }
+    console.log(`[deleteProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
     // Vérifier si l'utilisateur est le propriétaire du projet OU un membre du personnel/admin
     if (
@@ -538,16 +551,19 @@ export async function deleteProject(req, res) {
         req.user.role !== 'staff' &&
         req.user.role !== 'admin')
     ) {
+      console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}`);
       return res
         .status(403)
         .json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet.' });
     }
 
+    console.log(`[deleteProject] Autorisation accordée. Suppression du projet ${project.title}`);
     await Project.findByIdAndDelete(id);
     await Evaluation.deleteMany({ project: id }); // Supprimer toutes les évaluations associées
 
     res.status(200).json({ message: 'Projet supprimé avec succès.' });
   } catch (e) {
+    console.error("Error in deleteProject:", e);
     res.status(500).json({ error: e.message });
   }
 }
