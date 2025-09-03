@@ -103,48 +103,28 @@ export default function Dashboard() {
         if (myProjectsRes.ok) {
           const rawMyProjectsData = await myProjectsRes.json();
           
-          // Dédupliquer les projets par templateProject._id en gardant le statut le plus avancé
-          const projectMap = new Map();
-          
-          rawMyProjectsData.forEach(project => {
-            // Utiliser templateProject._id comme clé, ou _id si pas de templateProject
-            const key = project.templateProject && project.templateProject._id 
-              ? project.templateProject._id 
-              : project._id;
-            
-            const existingProject = projectMap.get(key);
-            
-            if (!existingProject) {
-              projectMap.set(key, project);
-            } else {
-              // Garder le projet avec le statut le plus avancé
-              const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-              const existingStatus = statusOrder[existingProject.status] || 0;
-              const newStatus = statusOrder[project.status] || 0;
-              
-              if (newStatus > existingStatus) {
-                projectMap.set(key, project);
-              }
-            }
+          // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
+          // Nous devons formater ces données pour qu'elles soient compatibles avec l'UI existante si nécessaire
+          const formattedStudentProjects = rawMyProjectsData.map(project => {
+            // Le backend devrait déjà fusionner le projet maître et l'assignation pour l'apprenant.
+            // Ici, nous nous assurons que les propriétés sont des tableaux pour éviter les erreurs R.map
+            const sanitizedProject = {
+              ...project,
+              objectives: project.objectives || [],
+              specifications: project.specifications || [],
+              exerciseStatements: project.exerciseStatements || [],
+              resourceLinks: project.resourceLinks || [],
+              evaluations: (project.evaluations || []).map(evalItem => ({
+                ...evalItem,
+                evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+              })),
+              student: project.student ? { _id: project.student._id, name: project.student.name, email: project.student.email } : null, // S'assurer que student est un objet
+            };
+            return sanitizedProject;
           });
-          
-          const uniqueMyProjects = Array.from(projectMap.values());
-          
-          // Trier par ordre du templateProject, puis par statut
-          const sortedMyProjects = uniqueMyProjects.sort((a, b) => {
-            // D'abord par ordre du template
-            const orderA = a.templateProject && a.templateProject.order ? a.templateProject.order : 0;
-            const orderB = b.templateProject && b.templateProject.order ? b.templateProject.order : 0;
-            
-            if (orderA !== orderB) return orderA - orderB;
-            
-            // Puis par statut (assigned > pending > approved)
-            const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-            const statusA = statusOrder[a.status] || 0;
-            const statusB = statusOrder[b.status] || 0;
-            
-            return statusA - statusB;
-          });
+
+          // Trier par ordre du projet maître
+          const sortedMyProjects = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
           
           setMyProjects(sortedMyProjects);
         } else {
@@ -193,7 +173,16 @@ export default function Dashboard() {
         const staffReviewRes = await fetch(`${API}/api/projects/awaiting-staff-review`, { headers: { Authorization: `Bearer ${token}` } });
         if (staffReviewRes.ok) {
           const staffReviewData = await staffReviewRes.json();
-          setProjectsAwaitingStaffReview(staffReviewData);
+          // Les données sont déjà formatées par le backend pour inclure les détails des assignations
+          const sanitizedStaffReviewData = staffReviewData.map(assignment => ({
+            ...assignment, // L'assignation est déjà fusionnée avec le projet maître
+            student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null,
+            evaluations: (assignment.evaluations || []).map(evalItem => ({
+              ...evalItem,
+              evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+            })),
+          }));
+          setProjectsAwaitingStaffReview(sanitizedStaffReviewData);
         } else {
           const errorData = await staffReviewRes.json();
           throw new Error(errorData.error || 'Échec du chargement des projets en attente de révision du personnel.');
@@ -212,12 +201,28 @@ export default function Dashboard() {
         }
       }
 
-      // Fetch all projects for staff/admin
+      // Fetch all projects (master projects with assignments) for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
         const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
         if (allProjectsRes.ok) {
-          const allProjectsData = await allProjectsRes.json();
-          setAllProjects(allProjectsData);
+          const rawAllProjectsData = await allProjectsRes.json();
+          // Assainir les projets maîtres et leurs assignations
+          const sanitizedAllProjects = rawAllProjectsData.map(project => ({
+            ...project,
+            objectives: project.objectives || [],
+            specifications: project.specifications || [],
+            exerciseStatements: project.exerciseStatements || [],
+            resourceLinks: project.resourceLinks || [],
+            assignments: (project.assignments || []).map(assign => ({
+              ...assign,
+              student: assign.student ? { _id: assign.student._id, name: assign.student.name, email: assign.student.email } : null, // S'assurer que student est un objet
+              evaluations: (assign.evaluations || []).map(evalItem => ({
+                ...evalItem,
+                evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+              })),
+            })),
+          }));
+          setAllProjects(sanitizedAllProjects);
         } else {
           const errorData = await allProjectsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de la liste de tous les projets.');
@@ -814,7 +819,7 @@ export default function Dashboard() {
                 <div className="list-group list-group-flush">
                   {myProjects.map(project => (
                     <div
-                      key={project._id}
+                      key={project.assignmentId}
                       className="card mb-3 shadow-sm border-success transform-hover"
                     >
                       <div className="card-body d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
@@ -835,8 +840,8 @@ export default function Dashboard() {
                                project.status === 'pending' ? 'En cours d\'évaluation' :
                                'Approuvé'}
                             </span>
-                            {project.templateProject && project.templateProject.order && (
-                              <small className="text-muted ms-2">(Projet {project.templateProject.order})</small>
+                            {project.order && (
+                              <small className="text-muted ms-2">(Projet {project.order})</small>
                             )}
                           </h5>
                           {/* <p className="card-text mb-1 text-muted d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Description: {project.description}</p> */}
@@ -893,7 +898,7 @@ export default function Dashboard() {
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student.name}</small>
                             <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-clock me-1"></i> Date: {evaluationStartTime.toLocaleDateString()} de {evaluationStartTime.toLocaleTimeString()} à {evaluationEndTime.toLocaleTimeString()}</small>
                             {/* <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-card-text me-1"></i> Description: {evaluation.project.description}</small> */}
-                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'evaluation.project.repoUrl'}</a></small>
+                            <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-github me-1"></i> Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{evaluation.project.repoUrl}</a></small>
                         </div>
                         <button
                           onClick={() => handleOpenEvaluationModal(evaluation)}
@@ -1537,8 +1542,7 @@ const handleFinalStaffReview = async (projectId, status) => {
 
     if (res.ok) {
       alert(data.message);
-      // Recharger les données du tableau de bord pour refléter les changements
-      window.location.reload(); // Solution simple pour recharger le dashboard
+      fetchData(); // Recharger les données du tableau de bord pour refléter les changements
     } else {
       alert(data.error || 'Échec de l\'évaluation finale.');
     }

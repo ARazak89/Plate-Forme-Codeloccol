@@ -10,12 +10,44 @@ export async function getEvaluationsForMySubmittedProjects(req, res) {
     const studentId = req.user._id;
 
     const evaluations = await Evaluation.find({ student: studentId })
-      .populate("project", "title status") // Ajoutez 'status' ici
+      .populate("project") // Populate the entire project to access its assignments
       .populate("evaluator", "name")
       .populate("slot", "startTime endTime")
       .sort("-createdAt");
 
-    res.status(200).json(evaluations);
+    const formattedEvaluations = evaluations.map(evalItem => {
+      const project = evalItem.project;
+      if (!project) return evalItem; // Handle case where project might be null (if deleted)
+
+      const assignment = project.assignments.id(evalItem.assignment); // Find the specific assignment by its ID
+      if (!assignment) return evalItem; // Handle case where assignment might be null
+
+      // Construct a new object with the desired project and assignment details
+      return {
+        ...evalItem.toObject(),
+        project: { // Only include necessary project master details
+          _id: project._id,
+          title: project.title,
+          description: project.description,
+          order: project.order,
+          demoVideoUrl: project.demoVideoUrl,
+          specifications: project.specifications,
+          exerciseStatements: project.exerciseStatements,
+          resourceLinks: project.resourceLinks,
+          objectives: project.objectives,
+          size: project.size,
+        },
+        assignment: { // Include specific assignment details
+          _id: assignment._id,
+          status: assignment.status,
+          repoUrl: assignment.repoUrl,
+          submissionDate: assignment.submissionDate,
+          // Add other assignment fields as needed
+        },
+      };
+    });
+
+    res.status(200).json(formattedEvaluations);
   } catch (e) {
     console.error('Error fetching evaluations for submitted projects:', e);
     res.status(500).json({ error: e.message });
@@ -31,11 +63,11 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
       evaluator: evaluatorId,
       status: "pending",
     })
-      .populate("project", "title description repoUrl student") // Ajouter 'student' ici pour populater l'étudiant du projet
-      .populate("student", "name")
+      .populate("project") // Populate the entire project to access its assignments
+      // .populate("student", "name") // Student will be populated via assignment
       .populate({
         path: "slot",
-        select: "startTime endTime bookedByStudent bookedForProject",
+        select: "startTime endTime bookedByStudent bookedForProject bookedForAssignment", // Add bookedForAssignment
         populate: [
           { path: "bookedByStudent", select: "name" },
           { path: "bookedForProject", select: "title" },
@@ -43,7 +75,40 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
       })
       .sort("slot.startTime");
 
-    res.status(200).json(evaluations);
+    const formattedEvaluations = evaluations.map(evalItem => {
+      const project = evalItem.project;
+      if (!project) return evalItem; // Handle case where project might be null
+
+      const assignment = project.assignments.id(evalItem.assignment); // Find the specific assignment by its ID
+      if (!assignment) return evalItem; // Handle case where assignment might be null
+
+      return {
+        ...evalItem.toObject(),
+        project: { // Only include necessary project master details
+          _id: project._id,
+          title: project.title,
+          description: project.description,
+          order: project.order,
+          demoVideoUrl: project.demoVideoUrl,
+          specifications: project.specifications,
+          exerciseStatements: project.exerciseStatements,
+          resourceLinks: project.resourceLinks,
+          objectives: project.objectives,
+          size: project.size,
+        },
+        assignment: { // Include specific assignment details
+          _id: assignment._id,
+          status: assignment.status,
+          repoUrl: assignment.repoUrl,
+          submissionDate: assignment.submissionDate,
+          student: assignment.student, // Include student details from assignment
+          // Add other assignment fields as needed
+        },
+        studentName: assignment.student ? assignment.student.name : 'N/A', // Pour compatibilité frontend
+      };
+    });
+
+    res.status(200).json(formattedEvaluations);
   } catch (e) {
     console.error('Error fetching pending evaluations for evaluator:', e);
     res.status(500).json({ error: e.message });
@@ -60,25 +125,54 @@ export async function getAllPendingEvaluationsForStaff(req, res) {
         .json({ error: "Non autorisé à consulter cette ressource." });
     }
 
-    const projects = await Project.find({
-      status: { $in: ["pending", "awaiting_staff_review"] },
-    });
-    const projectIds = projects.map((project) => project._id);
-
     const evaluations = await Evaluation.find({
-      project: { $in: projectIds },
+      // Nous cherchons des évaluations liées à des assignations avec les statuts pertinents
+      // Le statut du projet maître lui-même est 'template'
+      // Nous devons donc faire la correspondance via les assignations
     })
       .populate({
         path: "project",
-        select: "title description repoUrl student",
-        populate: { path: "student", select: "name email" },
+        populate: {
+          path: "assignments.student",
+          select: "name email",
+        },
       })
       .populate("evaluator", "name email")
-      .populate("slot", "startTime endTime")
-      .select("project student evaluator slot status submissionDate") // Explicitly select relevant fields
+      .populate("slot", "startTime endTime bookedByStudent bookedForProject bookedForAssignment") // Inclure bookedForAssignment
+      .select("project assignment student evaluator slot status submissionDate") // Ajouter assignment
       .sort("slot.startTime");
 
-    res.status(200).json(evaluations);
+    // Filtrer les évaluations pour ne retourner que celles liées à des assignations avec les statuts requis
+    const filteredEvaluations = evaluations.filter(evalItem => {
+      if (!evalItem.project) return false;
+      const assignment = evalItem.project.assignments.id(evalItem.assignment);
+      return assignment && (assignment.status === "pending" || assignment.status === "awaiting_staff_review");
+    }).map(evalItem => {
+        const project = evalItem.project;
+        const assignment = project.assignments.id(evalItem.assignment);
+
+        return {
+          ...evalItem.toObject(),
+          project: { // Détails du projet maître
+            _id: project._id,
+            title: project.title,
+            description: project.description,
+            order: project.order,
+            // ... autres champs du projet maître
+          },
+          assignment: { // Détails de l'assignation spécifique
+            _id: assignment._id,
+            status: assignment.status,
+            repoUrl: assignment.repoUrl,
+            submissionDate: assignment.submissionDate,
+            student: assignment.student, // L'apprenant est déjà peuplé via project.assignments.student
+            // ... autres champs d'assignation
+          },
+          studentName: assignment.student ? assignment.student.name : 'N/A', // Pour compatibilité frontend
+        };
+    });
+
+    res.status(200).json(filteredEvaluations);
   } catch (e) {
     console.error('Error fetching all pending evaluations for staff:', e);
     res.status(500).json({ error: e.message });
@@ -92,10 +186,20 @@ export async function submitEvaluation(req, res) {
     const { feedback, status } = req.body; // feedback est un objet, status est 'accepted' ou 'rejected'
     const evaluatorId = req.user._id;
 
-    const evaluation = await Evaluation.findById(evaluationId);
+    const evaluation = await Evaluation.findById(evaluationId).populate('project');
 
     if (!evaluation) {
       return res.status(404).json({ error: "Évaluation non trouvée." });
+    }
+
+    // Vérifier l'existence du projet maître et de l'assignation
+    const project = evaluation.project;
+    if (!project) {
+      return res.status(404).json({ error: "Projet maître lié à l'évaluation non trouvé." });
+    }
+    const assignment = project.assignments.id(evaluation.assignment);
+    if (!assignment) {
+      return res.status(404).json({ error: "Assignation liée à l'évaluation non trouvée." });
     }
 
     if (!evaluation.evaluator.equals(evaluatorId)) {
@@ -141,40 +245,33 @@ export async function submitEvaluation(req, res) {
     evaluation.submissionDate = new Date();
     await evaluation.save();
 
-    // Récupérer toutes les évaluations pour ce projet
-    const projectEvaluations = await Evaluation.find({
-      project: evaluation.project,
+    // Récupérer toutes les évaluations pour cette assignation spécifique
+    const assignmentEvaluations = await Evaluation.find({
+      assignment: assignment._id,
     });
 
     // Vérifier si toutes les évaluations sont complétées (non en statut 'pending')
-    const allPeerEvaluationsCompleted = projectEvaluations.every(
+    const allPeerEvaluationsCompleted = assignmentEvaluations.every(
       (evalItem) => evalItem.status !== "pending",
     );
 
-    const project = await Project.findById(evaluation.project);
-    if (!project) {
-      return res
-        .status(404)
-        .json({ error: "Projet non trouvé lors de la mise à jour du statut." });
-    }
-
     if (allPeerEvaluationsCompleted) {
-      // Si au moins une évaluation est 'rejected', le projet est 'rejected'
-      const anyRejected = projectEvaluations.some(
+      // Si au moins une évaluation est 'rejected', l'assignation est 'rejected'
+      const anyRejected = assignmentEvaluations.some(
         (evalItem) => evalItem.status === "rejected",
       );
 
       if (anyRejected) {
-        project.status = "rejected";
+        assignment.status = "rejected";
         // Notifier l'étudiant que son projet a été rejeté par un évaluateur pair
         await Notification.create({
-          user: project.student,
+          user: assignment.student,
           type: "project_status_update",
           message: `Le statut de votre projet \'${project.title}\' est maintenant : Rejeté par un évaluateur pair. Veuillez revoir votre projet.`,
         });
       } else {
-        // Si toutes les évaluations sont acceptées, le projet passe à l'état d'attente de l'évaluation du personnel
-        project.status = "awaiting_staff_review";
+        // Si toutes les évaluations sont acceptées, l'assignation passe à l'état d'attente de l'évaluation du personnel
+        assignment.status = "awaiting_staff_review";
         // Notifier TOUS les membres du personnel qu'un projet est prêt pour l'évaluation finale
         const staffUsers = await User.find({
           role: { $in: ["staff", "admin"] },
@@ -183,22 +280,22 @@ export async function submitEvaluation(req, res) {
           await Notification.create({
             user: staff._id,
             type: "project_awaiting_staff_review",
-            message: `Le projet \'${project.title}\' est en attente de votre évaluation finale.`,
+            message: `Le projet \'${project.title}\' soumis par ${assignment.student.name} est en attente de votre évaluation finale.`,
           });
         }
         // Notifier l'apprenant que son projet est en attente d'évaluation par le personnel
         await Notification.create({
-          user: project.student,
+          user: assignment.student,
           type: "project_status_update",
           message: `Votre projet \'${project.title}\' a été validé par les pairs et est maintenant en attente de l'évaluation finale par le personnel.`,
         });
       }
     } else {
-      // Si toutes les évaluations ne sont pas encore complètes, le statut du projet reste 'pending'
-      project.status = "pending";
+      // Si toutes les évaluations ne sont pas encore complètes, le statut de l'assignation reste 'pending'
+      assignment.status = "pending";
     }
 
-    await project.save();
+    await project.save(); // Sauvegarder le projet maître pour persister les changements de l'assignation
 
     res
       .status(200)

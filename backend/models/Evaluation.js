@@ -7,6 +7,10 @@ const evaluationSchema = new mongoose.Schema(
       ref: "Project",
       required: true,
     },
+    assignment: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true, // L'assignation est désormais requise pour une évaluation
+    },
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

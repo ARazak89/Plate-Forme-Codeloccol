@@ -68,80 +68,63 @@ function ProjectsPage() {
       // Chargement conditionnel des projets
       let projectsToSet = [];
       if (userData.role === 'staff' || userData.role === 'admin') {
-        // Pour staff/admin: charger tous les projets
+        // Pour staff/admin: charger tous les projets templates avec leurs assignations peuplées
         const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
         if (!allProjectsRes.ok) {
           const errorData = await allProjectsRes.json();
-          throw new Error(errorData.error || 'Échec du chargement de tous les projets.');
+          throw new Error(errorData.error || 'Échec du chargement de tous les projets maîtres.');
         }
         const rawProjects = await allProjectsRes.json();
-        // Dédupliquer les projets par _id
-        const uniqueProjects = Array.from(new Map(rawProjects.map(project => [project._id, project])).values());
-        // Sépare les projets templates des projets assignés
-        const projectTemplates = uniqueProjects.filter(p => p.status === 'template');
-        const studentProjects = uniqueProjects.filter(p => p.status !== 'template');
-
-        // Regrouper les projets d'apprenants par leur templateProject et assainir les propriétés
-        const groupedProjects = projectTemplates.map(template => ({
-          ...sanitizeProjectArrays(template),
-          assignedProjects: studentProjects.filter(p => p.templateProject && p.templateProject._id === template._id).map(sanitizeProjectArrays)
+        // Assainir les projets maîtres et leurs assignations
+        const sanitizedProjects = rawProjects.map(project => ({
+          ...sanitizeProjectArrays(project),
+          assignments: (project.assignments || []).map(assign => ({
+            ...assign,
+            student: assign.student ? { _id: assign.student._id, name: assign.student.name, email: assign.student.email } : null, // S'assurer que student est un objet
+            evaluations: (assign.evaluations || []).map(evalItem => ({
+              ...evalItem,
+              evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+            })),
+          })),
         }));
-        
-        // Si des projets d'apprenants n'ont pas de template (ce qui ne devrait pas arriver avec la logique actuelle, mais au cas où)
-        const projectsWithoutTemplate = studentProjects.filter(p => !p.templateProject).map(sanitizeProjectArrays);
-        
-        setAllProjects(groupedProjects);
-        setProjects(projectsWithoutTemplate); // Pourrait être utilisé pour afficher des projets non liés à un template
+        setAllProjects(sanitizedProjects);
+        setProjects([]); // Les apprenants n'ont pas de projets "template" directement ici
       } else {
-        // Pour apprenant: charger leurs projets
+        // Pour apprenant: charger leurs projets maîtres avec leurs assignations
         const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
         if (!myProjectsRes.ok) {
           const errorData = await myProjectsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de mes projets.');
         }
         const rawProjects = await myProjectsRes.json();
-        console.log('Projets bruts reçus:', rawProjects);
-        
-        // Dédupliquer les projets par templateProject._id en gardant le statut le plus avancé
-        // quand un projet passe de assigned à pending puis approved
-        const projectMap = new Map();
-        
-        rawProjects.forEach(project => {
-          // Assainir le projet avant de l'ajouter à la map
-          const sanitizedProject = sanitizeProjectArrays(project);
-          const key = sanitizedProject.templateProject ? sanitizedProject.templateProject._id || sanitizedProject.templateProject : sanitizedProject._id;
-          const existingProject = projectMap.get(key);
-          
-          if (!existingProject) {
-            projectMap.set(key, sanitizedProject);
-          } else {
-            // Garder le projet avec le statut le plus avancé
-            const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-            const existingStatus = statusOrder[existingProject.status] || 0;
-            const newStatus = statusOrder[sanitizedProject.status] || 0;
+        console.log('Projets bruts reçus pour apprenant:', rawProjects);
+
+        // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
+        const formattedStudentProjects = rawProjects.map(project => {
+            const sanitizedProject = sanitizeProjectArrays(project);
+            const assignment = sanitizedProject.assignments && sanitizedProject.assignments.length > 0 ? sanitizedProject.assignments[0] : null;
             
-            if (newStatus > existingStatus) {
-              projectMap.set(key, sanitizedProject);
+            if (assignment) {
+              return {
+                ...sanitizedProject, // Détails du projet maître
+                ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
+                assignmentId: assignment._id, // Ajouter l'ID de l'assignation pour faciliter l'utilisation
+                student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Références directes pour compatibilité UI
+                evaluations: (assignment.evaluations || []).map(evalItem => ({
+                  ...evalItem,
+                  evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+                })),
+              };
+            } else {
+              return sanitizedProject;
             }
-          }
         });
-        
-        const uniqueProjects = Array.from(projectMap.values());
-        console.log('Projets uniques après déduplication:', uniqueProjects);
-        
-        // Trier par ordre du templateProject, puis par statut (assigned en premier, puis pending, puis approved)
-        projectsToSet = uniqueProjects.sort((a, b) => {
-          // D'abord par ordre du template
-          const orderA = a.templateProject ? (a.templateProject.order || 0) : 0;
-          const orderB = b.templateProject ? (b.templateProject.order || 0) : 0;
-          if (orderA !== orderB) return orderA - orderB;
-          
-          // Puis par statut (assigned > pending > approved)
-          const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
-          return statusOrder[a.status] - statusOrder[b.status];
-        });
+
+        // Trier par ordre du projet maître
+        projectsToSet = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        setProjects(projectsToSet);
       }
-      setProjects(projectsToSet);
     } catch (e) {
       console.error("Error loading projects page data:", e);
       setError('Error loading data: ' + e.message);
@@ -269,14 +252,14 @@ function ProjectsPage() {
     setCurrentProjectToEdit(project);
     setProjectTitle(project.title);
     setProjectDescription(project.description);
-    setProjectRepoUrl(project.repoUrl || '');
+    setProjectRepoUrl(project.repoUrl || ''); // Sera utilisé pour les assignations
     setProjectDemoVideoUrl(project.demoVideoUrl || '');
-    setProjectSpecifications(project.specifications || []); // Joindre pour l'édition
+    setProjectSpecifications(project.specifications || []);
     setProjectSize(project.size || 'short');
-    setProjectExerciseStatements(project.exerciseStatements || []); // Joindre pour l'édition
-    setProjectResourceLinks(project.resourceLinks || []); // Joindre pour l'édition
-    setProjectObjectives(project.objectives || []); // Joindre pour l'édition
-    setProjectOrder(project.order || 0); // Pré-remplir l'ordre
+    setProjectExerciseStatements(project.exerciseStatements || []);
+    setProjectResourceLinks(project.resourceLinks || []);
+    setProjectObjectives(project.objectives || []);
+    setProjectOrder(project.order || 0);
     setShowEditProjectModal(true);
   };
 
@@ -293,21 +276,30 @@ function ProjectsPage() {
         throw new Error('Token not found. Please log in.');
       }
 
-      const res = await fetch(`${API}/api/projects/${currentProjectToEdit._id}`, {
+      const body = {
+        title: projectTitle,
+        description: projectDescription,
+        demoVideoUrl: projectDemoVideoUrl,
+        specifications: projectSpecifications,
+        size: projectSize,
+        order: projectOrder,
+        objectives: projectObjectives,
+        exerciseStatements: projectExerciseStatements,
+        resourceLinks: projectResourceLinks,
+      };
+
+      let url = `${API}/api/projects/${currentProjectToEdit._id}`;
+      if (currentProjectToEdit.assignmentId) { // Si c'est une assignation d'étudiant
+        url = `${API}/api/projects/${currentProjectToEdit.projectId}`; // L'ID du projet maître
+        body.assignmentId = currentProjectToEdit.assignmentId; // Passer l'ID de l'assignation
+        body.repoUrl = projectRepoUrl; // Mettre à jour le repoUrl de l'assignation
+        // Ajouter d'autres champs spécifiques à l'assignation si nécessaire (par ex. status pour staff/admin)
+      }
+
+      const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          title: projectTitle, 
-          description: projectDescription, 
-          repoUrl: currentProjectToEdit.student ? projectRepoUrl : undefined, 
-          demoVideoUrl: projectDemoVideoUrl, 
-          specifications: projectSpecifications, 
-          size: projectSize, 
-          exerciseStatements: projectExerciseStatements, 
-          resourceLinks: projectResourceLinks, 
-          objectives: projectObjectives,
-          order: projectOrder, // Inclure l'ordre
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (res.ok) {
@@ -319,12 +311,12 @@ function ProjectsPage() {
         setProjectDescription('');
         setProjectRepoUrl('');
         setProjectDemoVideoUrl('');
-        setProjectSpecifications([]); // Réinitialiser
+        setProjectSpecifications([]);
         setProjectSize('short');
-        setProjectExerciseStatements([]); // Réinitialiser
-        setProjectResourceLinks([]); // Réinitialiser
-        setProjectObjectives([]); // Réinitialiser
-        setProjectOrder(0); // Réinitialiser
+        setProjectExerciseStatements([]);
+        setProjectResourceLinks([]);
+        setProjectObjectives([]);
+        setProjectOrder(0);
         loadData(getAuthToken()); // Recharger toutes les données
       } else {
         throw new Error(data.error || 'Échec de la mise à jour du projet.');
@@ -337,18 +329,20 @@ function ProjectsPage() {
     }
   };
 
-  const handleDeleteProject = (projectId) => {
-    // Trouver le projet à supprimer pour afficher son titre dans la modale de confirmation
-    const project = allProjects.find(p => p._id === projectId);
-    if (project) {
-      setCurrentProjectToDelete(project);
-      setShowDeleteProjectModal(true);
-    }
+  const handleDeleteProject = (projectToDelete) => {
+    setCurrentProjectToDelete(projectToDelete);
+    setShowDeleteProjectModal(true);
   };
 
-  const handleDeleteProjectConfirmed = async (projectId) => {
+  const handleDeleteProjectConfirmed = async () => {
     setError(null);
     setLoading(true);
+
+    if (!currentProjectToDelete || confirmProjectTitle !== currentProjectToDelete.title) {
+      setError('Le titre de confirmation ne correspond pas.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const token = getAuthToken();
@@ -356,18 +350,29 @@ function ProjectsPage() {
         throw new Error('Token not found. Please log in.');
       }
 
-      const res = await fetch(`${API}/api/projects/${projectId}`, {
+      const body = {};
+      let url = `${API}/api/projects/${currentProjectToDelete._id}`;
+
+      if (currentProjectToDelete.assignmentId) {
+        // Si c'est une assignation, l'ID à supprimer est l'assignation
+        url = `${API}/api/projects/${currentProjectToDelete.projectId}`; // L'ID du projet maître
+        body.assignmentId = currentProjectToDelete.assignmentId; // Passer l'ID de l'assignation
+      }
+
+      const res = await fetch(url, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
       if (res.ok) {
-        alert('Projet supprimé avec succès !');
+        alert('Suppression effectuée avec succès !');
         setShowDeleteProjectModal(false);
         setCurrentProjectToDelete(null);
+        setConfirmProjectTitle('');
         loadData(getAuthToken()); // Recharger toutes les données
       } else {
-        throw new Error(data.error || 'Échec de la suppression du projet.');
+        throw new Error(data.error || 'Échec de la suppression.');
       }
     } catch (e) {
       console.error("Error deleting project:", e);
@@ -388,7 +393,8 @@ function ProjectsPage() {
     try {
       const token = getAuthToken();
       // Charger les slots disponibles pour ce projet
-      const slotsRes = await fetch(`${API}/api/availability/available-for-project/${project._id}`, {
+      // La route doit maintenant prendre projectId et assignmentId
+      const slotsRes = await fetch(`${API}/api/availability/available-for-project/${project.projectId}/${project.assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (slotsRes.ok) {
@@ -441,10 +447,12 @@ function ProjectsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`${API}/api/projects/${currentProjectToSubmit._id}/submit`, {
+      // L'API submitProjectSolution doit maintenant prendre projectId et assignmentId
+      const res = await fetch(`${API}/api/projects/${currentProjectToSubmit.projectId}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
+          assignmentId: currentProjectToSubmit.assignmentId, // Passer l'ID de l'assignation
           repoUrl: projectSubmissionRepoUrl,
           selectedSlotIds: selectedSlotIds
         }),
@@ -535,13 +543,13 @@ function ProjectsPage() {
                             <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(projectGroup)} title="Modifier Projet Maître">
                               <i className="bi bi-pencil-square"></i>
                             </button>
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(projectGroup._id)} title="Supprimer Projet Maître">
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(projectGroup)} title="Supprimer Projet Maître">
                               <i className="bi bi-trash"></i>
                             </button>
                           </td>
                         </tr>
-                        {projectGroup.assignedProjects.length > 0 ? (
-                          projectGroup.assignedProjects.map(assignedProject => (
+                        {projectGroup.assignments.length > 0 ? (
+                          projectGroup.assignments.map(assignedProject => (
                             <tr key={assignedProject._id}>
                               <td></td> {/* Cellule vide pour l'alignement */}
                               <td><i className="bi bi-arrow-return-right me-2 text-muted"></i> {assignedProject.title}</td>
@@ -558,7 +566,7 @@ function ProjectsPage() {
                                 <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(assignedProject)} title="Modifier Projet de l'Apprenant">
                                   <i className="bi bi-pencil-square"></i>
                                 </button>
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(assignedProject._id)} title="Supprimer Projet de l'Apprenant">
+                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(assignedProject)} title="Supprimer Projet de l'Apprenant">
                                   <i className="bi bi-trash"></i>
                                 </button>
                               </td>
@@ -1105,7 +1113,7 @@ function ProjectsPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
-                  onClick={() => handleDeleteProjectConfirmed(currentProjectToDelete._id)}
+                  onClick={handleDeleteProjectConfirmed}
                   disabled={confirmProjectTitle !== currentProjectToDelete.title} // Désactivé si le titre ne correspond pas
                 >
                   <i className="bi bi-trash me-2"></i> Supprimer
