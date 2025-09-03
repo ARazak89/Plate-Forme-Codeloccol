@@ -165,7 +165,14 @@ function ProjectsPage() {
   };
 
   const handleCardClick = (project) => {
-    setSelectedProject(project);
+    const sanitizedProject = {
+      ...project,
+      objectives: project.objectives || [],
+      specifications: project.specifications || [],
+      exerciseStatements: project.exerciseStatements || [],
+      resourceLinks: project.resourceLinks || [],
+    };
+    setSelectedProject(sanitizedProject);
     setShowProjectModal(true);
   };
 
@@ -661,11 +668,11 @@ function ProjectsPage() {
                     <h6 className="text-primary mb-3">Informations du Projet</h6>
                     
                     {/* Objectives */}
-                    {selectedProject.objectives && selectedProject.objectives.length > 0 && (
+                    {selectedProject.objectives && (selectedProject.objectives || []).length > 0 && (
                       <div className="mb-3">
                         <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
                         <ul className="list-group list-group-flush border-top pt-2">
-                          {selectedProject.objectives.map((objective, index) => (
+                          {(selectedProject.objectives || []).map((objective, index) => (
                             <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                               <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
                             </li>
@@ -675,11 +682,11 @@ function ProjectsPage() {
                     )}
 
                     <p className="d-flex align-items-center mb-1"><i className="bi bi-journal-text me-2 text-muted"></i><strong>Description:</strong> {selectedProject.description}</p>
-                    {selectedProject.specifications && selectedProject.specifications.length > 0 && (
+                    {selectedProject.specifications && (selectedProject.specifications || []).length > 0 && (
                       <div className="mb-3">
                         <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Spécifications</h6>
                         <ul className="list-group list-group-flush border-top pt-2">
-                          {selectedProject.specifications.map((spec, index) => (
+                          {(selectedProject.specifications || []).map((spec, index) => (
                             <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                               <i className="bi bi-check-lg text-success me-2 mt-1"></i> {spec}
                             </li>
@@ -708,11 +715,11 @@ function ProjectsPage() {
                     )}
 
                     {/* Resource Links */}
-                    {selectedProject.resourceLinks && selectedProject.resourceLinks.length > 0 && (
+                    {selectedProject.resourceLinks && (selectedProject.resourceLinks || []).length > 0 && (
                       <div className="mt-3">
                         <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
                         <ul className="list-group list-group-flush border-top pt-2">
-                          {selectedProject.resourceLinks.map((link, index) => (
+                          {(selectedProject.resourceLinks || []).map((link, index) => (
                             <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                               <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
                               <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
@@ -722,11 +729,11 @@ function ProjectsPage() {
                       </div>
                     )}
 
-                    {selectedProject.exerciseStatements && selectedProject.exerciseStatements.length > 0 && (
+                    {selectedProject.exerciseStatements && (selectedProject.exerciseStatements || []).length > 0 && (
                       <div className="mt-3">
                         <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
                         <ul className="list-group list-group-flush border-top pt-2">
-                          {selectedProject.exerciseStatements.map((statement, index) => (
+                          {(selectedProject.exerciseStatements || []).map((statement, index) => (
                             <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                               <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
                             </li>
@@ -1095,11 +1102,11 @@ function ProjectsPage() {
                 <div className="mb-4 p-3 bg-light border rounded">
                   <h6 className="text-primary d-flex align-items-center mb-3"><i className="bi bi-info-circle me-2"></i> Informations du Projet</h6>
                   
-                  {currentProjectToSubmit.objectives && currentProjectToSubmit.objectives.length > 0 && (
+                  {currentProjectToSubmit.objectives && (currentProjectToSubmit.objectives || []).length > 0 && (
                     <div className="mb-3">
                       <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
                       <ul className="list-group list-group-flush border-top pt-2">
-                        {currentProjectToSubmit.objectives.map((objective, index) => (
+                        {(currentProjectToSubmit.objectives || []).map((objective, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
                       </li>
@@ -1109,14 +1116,23 @@ function ProjectsPage() {
                   )}
 
                   <p className="d-flex align-items-center mb-1"><strong>Description:</strong> {currentProjectToSubmit.description}</p>
-                  {currentProjectToSubmit.specifications && (
-                    <p className="d-flex align-items-center mb-1"><strong>Spécifications:</strong> {currentProjectToSubmit.specifications}</p>
+                  {currentProjectToSubmit.specifications && (currentProjectToSubmit.specifications || []).length > 0 && (
+                    <div className="mb-3">
+                      <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Spécifications</h6>
+                      <ul className="list-group list-group-flush border-top pt-2">
+                        {(currentProjectToSubmit.specifications || []).map((spec, index) => (
+                          <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                            <i className="bi bi-check-lg text-success me-2 mt-1"></i> {spec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                  {currentProjectToSubmit.resourceLinks && currentProjectToSubmit.resourceLinks.length > 0 && (
+                  {currentProjectToSubmit.resourceLinks && (currentProjectToSubmit.resourceLinks || []).length > 0 && (
                     <div className="mt-3">
                       <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
                       <ul className="list-group list-group-flush border-top pt-2">
-                        {currentProjectToSubmit.resourceLinks.map((link, index) => (
+                        {(currentProjectToSubmit.resourceLinks || []).map((link, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
                             <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
@@ -1128,11 +1144,11 @@ function ProjectsPage() {
                   {currentProjectToSubmit.demoVideoUrl && (
                     <p className="d-flex align-items-center mb-1"><i className="bi bi-camera-video me-2 text-muted"></i><a href={currentProjectToSubmit.demoVideoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">Vidéo de Démonstration</a></p>
                   )}
-                  {currentProjectToSubmit.exerciseStatements && currentProjectToSubmit.exerciseStatements.length > 0 && (
+                  {currentProjectToSubmit.exerciseStatements && (currentProjectToSubmit.exerciseStatements || []).length > 0 && (
                     <div className="mt-3">
                       <h6 className="text-primary mb-2 d-flex align-items-center"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
                       <ul className="list-group list-group-flush border-top pt-2">
-                        {currentProjectToSubmit.exerciseStatements.map((statement, index) => (
+                        {(currentProjectToSubmit.exerciseStatements || []).map((statement, index) => (
                           <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
                             <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
                           </li>
