@@ -1007,38 +1007,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Section des évaluations que JE DOIS FAIRE (en tant qu'évaluateur) - Ancienne version avec évaluationsAsEvaluator, si besoin */}
-      {/* Me && me.role === 'apprenant' && evaluationsAsEvaluator.length > 0 && (
-        <div className="row mb-4">
-          <div className="col-12">
-            <div className="card shadow-sm">
-              <div className="card-header bg-danger text-white">
-                <h2 className="h5 mb-0">Évaluations à Réaliser (Ancien)</h2>
-              </div>
-              <div className="card-body">
-                <div className="list-group">
-                  {evaluationsAsEvaluator.map(evaluation => (
-                    <div key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                      <div>
-                        <h5 className="mb-1">Projet: {evaluation.project.title}</h5>
-                        <small className="text-muted">Soumis par: {evaluation.student.name}</small><br/>
-                        <small className="text-muted">Date & Heure d'évaluation: {new Date(evaluation.slot.startTime).toLocaleString()}</small>
-                      </div>
-                      <button
-                        className="btn btn-sm btn-warning mt-2 mt-md-0"
-                        onClick={() => handleOpenEvaluationModal(evaluation)}
-                      >
-                        <i className="bi bi-pencil-square me-1"></i> Évaluer le projet
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
-
       {/* Nouveau: Section pour les projets en attente de révision finale du personnel */}
       {me && (me.role === 'staff' || me.role === 'admin') && projectsAwaitingStaffReview.length > 0 && (
         <div className="row mb-4">
@@ -1229,20 +1197,6 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {me && (me.role === 'apprenant') && (
-        <div className="row">
-          <div className="col-lg-6 mb-4">
-            <ProjectList projects={projects} />
-          </div>
-          <div className="col-lg-6 mb-4">
-            <HackathonList hackathons={hackathons} />
-          </div>
-          <div className="col-12 mb-4">
-            <BadgeDisplay badges={badges} />
           </div>
         </div>
       )}
