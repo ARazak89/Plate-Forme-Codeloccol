@@ -562,97 +562,6 @@ export default function Dashboard() {
     }
   };
 
-
-
-  // NOTE: La fonction renderEvaluatorDashboard n'est plus utilisée directement ici, car ses sections sont déplacées.
-  // Vous pouvez la supprimer si elle n'est pas utilisée ailleurs.
-  // const renderEvaluatorDashboard = () => (
-  //   <div className="space-y-6">
-  //     <h2 className="text-2xl font-bold text-gray-800">Votre Tableau de Bord Évaluateur</h2>
-
-  //     {myCreatedSlots.length > 0 && (
-  //       <section className="bg-white p-6 rounded-lg shadow">
-  //         <h3 className="text-xl font-semibold text-gray-700 mb-4">Vos Slots de Disponibilité Créés</h3>
-  //         <ul className="space-y-2">
-  //           {myCreatedSlots.map((slot) => (
-  //             <li key={slot._id} className="bg-gray-50 p-3 rounded-md flex justify-between items-center">
-  //               <span>
-  //                 Le {new Date(slot.startTime).toLocaleDateString()} de {new Date(slot.startTime).toLocaleTimeString()} à {new Date(slot.endTime).toLocaleTimeString()}
-  //               </span>
-  //               {slot.isBooked ? (
-  //                 <small className="text-success">
-  //                   Occupé par {slot.bookedByStudent ? slot.bookedByStudent.name : '[Utilisateur inconnu]'}
-  //                   pour {slot.bookedForProject ? slot.bookedForProject.title : '[Projet inconnu]'}
-  //                 </small>
-  //               ) : (
-  //                 <span className="text-blue-500">Disponible</span>
-  //               )}
-  //             </li>
-  //           ))}
-  //         </ul>
-  //       </section>
-  //     )}
-
-  //     {upcomingEvaluations.length > 0 && (
-  //       <section className="bg-white p-6 rounded-lg shadow">
-  //         <h3 className="text-xl font-semibold text-gray-700 mb-4">Corrections à Venir</h3>
-  //         <ul className="space-y-4">
-  //           {upcomingEvaluations.map((evaluation) => {
-  //             const evaluationTime = new Date(evaluation.slot.startTime);
-  //             const now = new Date();
-  //             const isEvaluationActive = now >= evaluationTime;
-
-  //             return (
-  //               <li key={evaluation._id} className="bg-gray-50 p-4 rounded-md shadow-sm">
-  //                 <p className="text-lg font-medium">Projet: {evaluation.project.title}</p>
-  //                 <p className="text-gray-600">Apprenant: {evaluation.student.name}</p>
-  //                 <p className="text-gray-600">
-  //                   Date: {evaluationTime.toLocaleDateString()} à {evaluationTime.toLocaleTimeString()}
-  //                 </p>
-  //                 <p className="text-gray-600">Description: {evaluation.project.description}</p>
-  //                 <p className="text-gray-600">Dépôt: <a href={evaluation.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{evaluation.project.repoUrl}</a></p>
-  //                 <button
-  //                   onClick={() => handleOpenEvaluationModal(evaluation)}
-  //                   disabled={!isEvaluationActive}
-  //                   className={`mt-3 px-4 py-2 rounded-md text-white font-semibold
-  //                     ${isEvaluationActive ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
-  //                 >
-  //                   {isEvaluationActive ? 'Évaluer' : `Actif à ${evaluationTime.toLocaleTimeString()}`}
-  //                 </button>
-  //               </li>
-  //             );
-  //           })}
-  //         </ul>
-  //       </section>
-  //     )}
-
-  //     {mySubmittedEvaluations.length > 0 && (
-  //       <section className="bg-white p-6 rounded-lg shadow">
-  //         <h3 className="text-xl font-semibold text-gray-700 mb-4">Mes Évaluations Soumises</h3>
-  //         <ul className="space-y-4">
-  //           {mySubmittedEvaluations.map((evaluation) => (
-  //             <li key={evaluation._id} className="bg-gray-50 p-4 rounded-md shadow-sm">
-  //               <p className="text-lg font-medium">Projet: {evaluation.project.title}</p>
-  //               <p className="text-gray-600">Évaluateur: {evaluation.evaluator.name}</p>
-  //               <p className="text-gray-600">Statut: {evaluation.status}</p>
-  //               {evaluation.feedback && evaluation.status !== 'pending' && (
-  //                 <div className="mt-2 text-sm text-gray-700">
-  //                   <h4 className="font-semibold">Feedback:</h4>
-  //                   <p>Assiduité: {evaluation.feedback.assiduite}</p>
-  //                   <p>Compréhension: {evaluation.feedback.comprehension}</p>
-  //                   <p>Spécifications: {evaluation.feedback.specifications}</p>
-  //                   <p>Maîtrise des concepts: {evaluation.feedback.maitrise_concepts}</p>
-  //                   <p>Capacité à expliquer: {evaluation.feedback.capacite_expliquer}</p>
-  //                 </div>
-  //               )}
-  //             </li>
-  //           ))}
-  //         </ul>
-  //       </section>
-  //     )}
-  //   </div>
-  // );
-
   if (!token) return <div className="text-center mt-5"><p className="lead">Veuillez vous connecter.</p></div>;
 
   if (isLoading) {
@@ -674,10 +583,10 @@ export default function Dashboard() {
       {me && (
         <div className="row mb-4">
           <div className="col-md-6 col-lg-4 mb-3">
-            <UserSummaryCard 
-              me={me} 
-              onShowCreateSlotModal={() => setShowCreateSlotModal(true)} 
-              onShowAddUserModal={() => setShowAddUserModal(true)} 
+            <UserSummaryCard
+              me={me}
+              onShowCreateSlotModal={() => setShowCreateSlotModal(true)}
+              onShowAddUserModal={() => setShowAddUserModal(true)}
             />
           </div>
           <div className="col-md-6 col-lg-8 mb-3">
@@ -748,11 +657,11 @@ export default function Dashboard() {
           }
           return acc;
         }, {}))
-        .filter(projectGroup => 
-          projectGroup.status !== 'approved' && 
+        .filter(projectGroup =>
+          projectGroup.status !== 'approved' &&
           projectGroup.status !== 'rejected'
         );
-        
+
         return pendingProjects.length > 0;
       })() && (
         <div className="row mb-4">
@@ -783,11 +692,11 @@ export default function Dashboard() {
                       }
                       return acc;
                     }, {}))
-                    .filter(projectGroup => 
-                      projectGroup.status !== 'approved' && 
+                    .filter(projectGroup =>
+                      projectGroup.status !== 'approved' &&
                       projectGroup.status !== 'rejected'
                     );
-                    
+
                     return pendingProjects.length > 0 ? (
                       pendingProjects.map(projectGroup => (
                       <div key={projectGroup.project._id} className="card mb-3 shadow-sm border-info">
@@ -870,6 +779,18 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Section Hackathons et Badges (pour apprenant) */}
+      {me && me.role === 'apprenant' && (
+        <div className="row mb-4">
+          <div className="col-lg-6 mb-4">
+            <HackathonList hackathons={hackathons} />
+          </div>
+          <div className="col-lg-6 mb-4">
+            <BadgeDisplay badges={badges} />
+          </div>
+        </div>
+      )}
+
       {/* Section des évaluations que JE DOIS FAIRE (en tant qu'évaluateur) */}
       {me && (me.role === 'apprenant' || me.role === 'staff' || me.role === 'admin') && (
         <div className="row mb-4">
@@ -947,7 +868,7 @@ export default function Dashboard() {
                         <li key={projectGroup.project._id} className="list-group-item d-flex flex-column align-items-start flex-wrap mb-3 py-3">
                           <div>
                             <h5 className="mb-1"><i className="bi bi-journals me-2"></i> Projet: {projectGroup.project.title} (Soumis par: {projectGroup.project.student?.name})</h5>
-                            <small className="text-muted d-flex align-items-center mt-1">Statut du projet: <span className="badge bg-info ms-1 rounded-pill">{projectGroup.project.status}</span></small>
+                            <small className="text-muted d-flex align-items-center mt-1">Statut du projet: <span className="badge bg-info ms-1 rounded-pill">{(projectGroup.project.status).replace(/_/g, ' ')}</span></small>
                             <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'projectGroup.project.repoUrl'}</a></small>
                           </div>
                           <div className="mt-3 w-100">
@@ -957,7 +878,7 @@ export default function Dashboard() {
                                 const evaluationTime = new Date(evalItem.slot.endTime); // Heure de fin du slot
                                 const submissionTime = evalItem.submissionDate ? new Date(evalItem.submissionDate) : null;
                                 const gracePeriodEnd = new Date(evaluationTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
-                                
+
                                 let statusText = 'En attente';
                                 let statusBadgeClass = 'bg-warning';
                                 let timeStatus = 'N/A';
@@ -1091,7 +1012,7 @@ export default function Dashboard() {
                               )}
                             </td>
                             <td className="text-center">
-                              <button 
+                              <button
                                 className="btn btn-sm btn-outline-secondary py-0 px-1"
                                 onClick={() => {
                                   const newExpandedLearners = { ...expandedLearners };
@@ -1374,9 +1295,9 @@ export default function Dashboard() {
                     </>
                   )}
                 </button>
-                <button 
-                  type="button" 
-                  className="btn btn-success d-flex align-items-center" 
+                <button
+                  type="button"
+                  className="btn btn-success d-flex align-items-center"
                   onClick={() => handleSubmitFeedback('accepted')}
                   disabled={isLoading || Object.values(feedback).some(value => value.trim() === '')}
                 >
@@ -1477,8 +1398,6 @@ export default function Dashboard() {
         </div>
       )}
       {showAddUserModal && <div className="modal-backdrop fade show"></div>}
-
-
     </div>
   );
 }
