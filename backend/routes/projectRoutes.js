@@ -14,6 +14,7 @@ import {
   updateProject,
   deleteProject,
   listAllProjects,
+  debugListAllProjectsWithAssignments,
 } from "../controllers/projectController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const r = Router();
@@ -41,6 +42,9 @@ r.get("/github-repo-title", requireAuth, getGithubRepoTitle); // Obtenir le titr
 
 // Nouvelle route pour lister tous les projets (pour staff/admin)
 r.get("/all", requireAuth, requireRole(["staff", "admin"]), listAllProjects);
+
+// Nouvelle route de débogage pour lister tous les projets avec leurs assignations
+r.get("/debug-all-with-assignments", requireAuth, requireRole(["staff", "admin"]), debugListAllProjectsWithAssignments);
 
 r.get("/:id", requireAuth, getProjectDetails); // Détails d'un projet spécifique (pour l'apprenant)
 r.post("/:id/submit", requireAuth, submitProjectSolution); // Soumettre la solution d'un projet

@@ -1056,3 +1056,22 @@ export async function getProjectsAwaitingStaffReview(req, res) {
     }); // Provide more detail
   }
 }
+
+// Nouvelle fonction de débogage pour lister tous les projets (y compris les templates et leurs assignations)
+export async function debugListAllProjectsWithAssignments(req, res) {
+  try {
+    const projects = await Project.find({}) // Trouver tous les projets, quel que soit leur statut
+      .populate({
+        path: 'assignments.student',
+        select: 'name email',
+      })
+      .populate({
+        path: 'assignments.evaluations',
+        populate: { path: 'evaluator', select: 'name' },
+      });
+    res.status(200).json(projects);
+  } catch (e) {
+    console.error("Error in debugListAllProjectsWithAssignments:", e);
+    res.status(500).json({ error: e.message });
+  }
+}
