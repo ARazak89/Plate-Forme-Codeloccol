@@ -670,61 +670,7 @@ function ProjectsPage() {
             )}
           </div>
 
-          {/* La section "Corrections à Venir" a été déplacée vers le tableau de bord pour éviter la duplication. */}
-          {/* <div className="col-12 mt-5 mb-4">
-            <h3>Corrections à Venir</h3>
-            {projectsToEvaluate.length === 0 ? (
-              <div className="alert alert-info text-center mt-3">
-                <i className="bi bi-info-circle me-2"></i> Aucune correction de projet à évaluer pour le moment.
-              </div>
-            ) : (
-              <div className="row">
-                {projectsToEvaluate.map(project => (
-                  <div key={project._id} className="col-md-6 col-lg-4 mb-4">
-                    <div 
-                      className="card h-100 shadow-hover-3d border-0 bg-light"
-                      onClick={() => handleCardClick(project)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="card-body d-flex flex-column">
-                        <div>
-                          <h5 className="card-title text-warning mb-2">
-                            <i className="bi bi-pencil-square me-2"></i> Correction pour: {project.title}
-                          </h5>
-                          {project.templateProject && project.templateProject.order && (
-                            <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
-                          )}
-                          <p className="card-text text-muted">Soumis par: <strong>{project.studentToEvaluate ? project.studentToEvaluate.name : 'Apprenant Inconnu'}</strong></p>
-                        </div>
-
-                        {/* Indicateur de statut avec icône */}
-                        <div className="mt-3 mb-3 d-flex align-items-center">
-                          <span className="badge rounded-pill bg-danger me-2">
-                            <i className="bi bi-hourglass-split me-1"></i> En Attente de votre Évaluation
-                          </span>
-                        </div>
-
-                        <div className="mt-auto">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Implémenter la fonction pour évaluer ce projet
-                              alert(`Évaluer le projet de ${project.studentToEvaluate ? project.studentToEvaluate.name : 'Apprenant Inconnu'}`);
-                            }}
-                            className="btn btn-warning w-100 btn-sm"
-                            title="Évaluer ce projet"
-                          >
-                            <i className="bi bi-check-circle me-2"></i>
-                            Commencer l'Évaluation
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div> */}
+          {/* Ancienne section "Corrections à Venir" supprimée pour éviter les erreurs de compilation */}
         </div>
       )}
 
