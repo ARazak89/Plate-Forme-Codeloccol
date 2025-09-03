@@ -17,6 +17,6 @@ r.get("/", requireAuth, getAvailableSlots); // Lister les slots disponibles (pou
 r.post("/book", requireAuth, requireRole(["apprenant"]), bookSlot); // Un apprenant réserve un slot
 r.get("/my-bookings", requireAuth, requireRole(["apprenant"]), getPeerBookings); // Un évaluateur voit ses réservations
 r.get("/mine", requireAuth, requireRole(["apprenant"]), getMyCreatedSlots); // Un apprenant voit les slots qu'il a créé
-r.get("/available-for-project/:projectId", requireAuth, requireRole(["apprenant"]), getAvailableSlotsForProject); // Récupérer les slots disponibles pour un projet spécifique
+r.get("/available-for-project/:projectId/:assignmentId", requireAuth, requireRole(["apprenant"]), getAvailableSlotsForProject); // Récupérer les slots disponibles pour un projet spécifique
 
 export default r;
