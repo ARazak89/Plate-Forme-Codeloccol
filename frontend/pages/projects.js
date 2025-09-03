@@ -5,6 +5,15 @@ import React from 'react'; // Added for React.Fragment
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+// Fonction utilitaire pour s'assurer que les propriétés sont des tableaux
+const sanitizeProjectArrays = (project) => ({
+  ...project,
+  objectives: project.objectives || [],
+  specifications: project.specifications || [],
+  exerciseStatements: project.exerciseStatements || [],
+  resourceLinks: project.resourceLinks || [],
+});
+
 function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,14 +81,14 @@ function ProjectsPage() {
         const projectTemplates = uniqueProjects.filter(p => p.status === 'template');
         const studentProjects = uniqueProjects.filter(p => p.status !== 'template');
 
-        // Regrouper les projets d'apprenants par leur templateProject
+        // Regrouper les projets d'apprenants par leur templateProject et assainir les propriétés
         const groupedProjects = projectTemplates.map(template => ({
-          ...template,
-          assignedProjects: studentProjects.filter(p => p.templateProject && p.templateProject._id === template._id)
+          ...sanitizeProjectArrays(template),
+          assignedProjects: studentProjects.filter(p => p.templateProject && p.templateProject._id === template._id).map(sanitizeProjectArrays)
         }));
         
         // Si des projets d'apprenants n'ont pas de template (ce qui ne devrait pas arriver avec la logique actuelle, mais au cas où)
-        const projectsWithoutTemplate = studentProjects.filter(p => !p.templateProject);
+        const projectsWithoutTemplate = studentProjects.filter(p => !p.templateProject).map(sanitizeProjectArrays);
         
         setAllProjects(groupedProjects);
         setProjects(projectsWithoutTemplate); // Pourrait être utilisé pour afficher des projets non liés à un template
@@ -98,19 +107,21 @@ function ProjectsPage() {
         const projectMap = new Map();
         
         rawProjects.forEach(project => {
-          const key = project.templateProject ? project.templateProject._id || project.templateProject : project._id;
+          // Assainir le projet avant de l'ajouter à la map
+          const sanitizedProject = sanitizeProjectArrays(project);
+          const key = sanitizedProject.templateProject ? sanitizedProject.templateProject._id || sanitizedProject.templateProject : sanitizedProject._id;
           const existingProject = projectMap.get(key);
           
           if (!existingProject) {
-            projectMap.set(key, project);
+            projectMap.set(key, sanitizedProject);
           } else {
             // Garder le projet avec le statut le plus avancé
             const statusOrder = { 'assigned': 0, 'pending': 1, 'approved': 2 };
             const existingStatus = statusOrder[existingProject.status] || 0;
-            const newStatus = statusOrder[project.status] || 0;
+            const newStatus = statusOrder[sanitizedProject.status] || 0;
             
             if (newStatus > existingStatus) {
-              projectMap.set(key, project);
+              projectMap.set(key, sanitizedProject);
             }
           }
         });
