@@ -33,6 +33,9 @@ const HackathonList = ({ hackathons }) => {
               Début: {new Date(hackathon.startDate).toLocaleDateString()}{' '}
               Fin: {new Date(hackathon.endDate).toLocaleDateString()}
             </small>
+            {hackathon.teamSize && (
+              <p className="mb-1 text-muted">Taille d'équipe: {hackathon.teamSize}</p>
+            )}
             {/* Ajoutez d'autres détails du hackathon ici */}
           </li>
         ))}

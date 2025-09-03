@@ -6,6 +6,7 @@ const hackathonSchema = new mongoose.Schema(
     description: String,
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    teamSize: { type: Number, required: true, min: 1 }, // Nouveau champ pour la taille des équipes
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     projects: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
     teams: [{ type: mongoose.Schema.Types.ObjectId, ref: "Team" }], // Ajouté pour lier les équipes au hackathon

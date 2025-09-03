@@ -4,10 +4,21 @@ import Notification from '../models/Notification.js'; // Importez le modèle Not
 import User from '../models/User.js'; // Added missing import for User
 import Evaluation from '../models/Evaluation.js'; // Importez le modèle Evaluation
 import Badge from '../models/Badge.js'; // Importez le modèle Badge pour attribuer des badges
+import Team from '../models/Team.js'; // Importez le modèle Team
 
 export async function createHackathon(req, res) {
   try {
-    const h = await Hackathon.create(req.body);
+    const { title, description, startDate, endDate, teamSize } = req.body;
+
+    if (!title || !startDate || !endDate || !teamSize) {
+      return res.status(400).json({ error: 'Le titre, la date de début, la date de fin et la taille des équipes sont obligatoires.' });
+    }
+
+    if (teamSize < 1) {
+      return res.status(400).json({ error: 'La taille des équipes doit être d\'au moins 1.' });
+    }
+
+    const h = await Hackathon.create({ title, description, startDate, endDate, teamSize });
     res.json(h);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -221,6 +232,80 @@ export async function getHackathonRankings(req, res) {
 
     res.status(200).json({ rankings: hackathon.rankings });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function listAvailableLearners(req, res) {
+  try {
+    const learners = await User.find({ role: 'apprenant' }).select('_id name email');
+    res.status(200).json(learners);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function constituteTeams(req, res) {
+  try {
+    const { id: hackathonId } = req.params; // ID du hackathon
+    const { teams } = req.body; // Array of { name: string, members: [userIds] }
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+      return res.status(400).json({ error: 'Les équipes sont requises et doivent être un tableau non vide.' });
+    }
+
+    const hackathon = await Hackathon.findById(hackathonId);
+    if (!hackathon) {
+      return res.status(404).json({ error: 'Hackathon non trouvé.' });
+    }
+
+    const teamSizeLimit = hackathon.teamSize;
+    const allTeamMemberIds = [];
+
+    for (const team of teams) {
+      if (!team.name || !Array.isArray(team.members) || team.members.length === 0) {
+        return res.status(400).json({ error: `Chaque équipe doit avoir un nom et au moins un membre.` });
+      }
+      if (team.members.length > teamSizeLimit) {
+        return res.status(400).json({ error: `L'équipe ${team.name} dépasse la taille maximale autorisée de ${teamSizeLimit} membres.` });
+      }
+      for (const memberId of team.members) {
+        if (allTeamMemberIds.includes(memberId)) {
+          return res.status(400).json({ error: `L'apprenant ${memberId} est assigné à plus d'une équipe.` });
+        }
+        allTeamMemberIds.push(memberId);
+      }
+    }
+
+    // Vérifier si des apprenants sont déjà dans des équipes pour ce hackathon
+    const existingTeamsForHackathon = await Team.find({ hackathon: hackathonId });
+    if (existingTeamsForHackathon.length > 0) {
+      // Optionnel: Gérer la mise à jour des équipes existantes ou interdire la re-constitution
+      // Pour l'instant, on va vider les équipes existantes pour permettre une nouvelle constitution.
+      await Team.deleteMany({ hackathon: hackathonId });
+      hackathon.teams = [];
+      await hackathon.save();
+    }
+
+    const createdTeams = [];
+    for (const teamData of teams) {
+      const newTeam = await Team.create({
+        name: teamData.name,
+        members: teamData.members,
+        hackathon: hackathonId,
+      });
+      createdTeams.push(newTeam);
+    }
+
+    hackathon.teams = createdTeams.map(team => team._id);
+    // Mettre à jour la liste des participants du hackathon avec tous les membres des équipes
+    hackathon.participants = [...new Set([...hackathon.participants.map(p => p.toString()), ...allTeamMemberIds.map(m => m.toString())])];
+
+    await hackathon.save();
+
+    res.status(200).json({ message: 'Équipes constituées avec succès.', teams: createdTeams });
+  } catch (e) {
+    console.error("Error constituting teams:", e);
     res.status(500).json({ error: e.message });
   }
 }

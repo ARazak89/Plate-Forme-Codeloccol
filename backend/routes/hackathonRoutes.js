@@ -8,6 +8,8 @@ import {
   deleteHackathon,
   evaluateHackathonProjects,
   getHackathonRankings,
+  listAvailableLearners,
+  constituteTeams,
 } from "../controllers/hackathonController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const r = Router();
@@ -24,4 +26,6 @@ r.post(
   evaluateHackathonProjects,
 ); // Nouvelle route pour évaluer et classer les projets de hackathon
 r.get("/:id/rankings", requireAuth, getHackathonRankings); // Nouvelle route pour récupérer les classements de hackathon
+r.get("/available-learners", requireAuth, requireRole(["staff", "admin"]), listAvailableLearners); // Nouvelle route pour récupérer les apprenants disponibles
+r.post("/:id/constitute-teams", requireAuth, requireRole(["staff", "admin"]), constituteTeams); // Nouvelle route pour constituer les équipes d'un hackathon
 export default r;

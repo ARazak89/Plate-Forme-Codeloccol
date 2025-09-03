@@ -256,7 +256,7 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false); // Fin du chargement
     }
-  }, [token, setMe, setProjects, setHackathons, setBadges, setProgress, setMySubmittedEvaluations, setEvaluationsAsEvaluator, setUpcomingEvaluations, setMyCreatedSlots, setError, setIsLoading, setProjectsAwaitingStaffReview, setLearners, setAllProjects, setAllPendingEvaluationsForStaff, setMyProjects]); // Ajouter setMyProjects ici
+  }, [token, setMe, setHackathons, setBadges, setProgress, setMySubmittedEvaluations, setEvaluationsAsEvaluator, setUpcomingEvaluations, setMyCreatedSlots, setError, setIsLoading, setProjectsAwaitingStaffReview, setLearners, setAllProjects, setAllPendingEvaluationsForStaff, setMyProjects]); // Supprimer setAvailableLearnersForTeams et setShowCreateHackathonModal
 
   useEffect(() => {
     // Tenter de récupérer le token une seule fois au montage du composant
@@ -348,6 +348,7 @@ export default function Dashboard() {
       maitrise_concepts: '',
       capacite_expliquer: '',
     });
+    setShowEvaluationModal(false);
   };
 
   const handleFeedbackChange = (e) => {
@@ -1032,25 +1033,25 @@ export default function Dashboard() {
                             </td>
                           </tr>
                           {expandedLearners[learner._id] && (
-                            <tr>
-                              <td colSpan="6" className="p-0 border-0">
-                                <div className="collapse show" id={`learner-details-${learner._id}`}>
-                                  <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
-                                    <h6 className="text-primary mb-2">Détails du Projet Assigné:</h6>
-                                    {learner.assignedProject ? (
-                                      <>
-                                        <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
-                                        <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: <span className={`badge bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'} ms-1`}>{learner.assignedProject.status}</span></p>
-                                        {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
-                                        {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
-                                      </>
-                                    ) : (
-                                      <p className="text-muted d-flex align-items-center"><i className="bi bi-x-circle me-2"></i> Aucun projet actuellement assigné.</p>
-                                    )}
-                                  </div>
+                          <tr>
+                            <td colSpan="6" className="p-0 border-0">
+                              <div className="collapse show" id={`learner-details-${learner._id}`}>
+                                <div className="bg-light p-3 border-start border-primary border-3 ms-3 mb-2 me-3 shadow-sm rounded">
+                                  <h6 className="text-primary mb-2">Détails du Projet Assigné:</h6>
+                                  {learner.assignedProject ? (
+                                    <>
+                                      <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
+                                      <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: <span className={`badge bg-${learner.assignedProject.status === 'info' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'} ms-1`}>{learner.assignedProject.status}</span></p>
+                                      {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
+                                      {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
+                                    </>
+                                  ) : (
+                                    <p className="text-muted d-flex align-items-center"><i className="bi bi-x-circle me-2"></i> Aucun projet actuellement assigné.</p>
+                                  )}
                                 </div>
-                              </td>
-                            </tr>
+                              </div>
+                            </td>
+                          </tr>
                           )}
                         </React.Fragment>
                       ))}
@@ -1071,9 +1072,14 @@ export default function Dashboard() {
               <div className="card-header bg-gradient bg-success text-white d-flex justify-content-between align-items-center">
                 <i className="bi bi-journals me-2"></i>
                 <h2 className="h5 mb-0">Gestion des Projets</h2>
-                <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
-                  <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
-                </button>
+                <div className="d-flex">
+                  <button className="btn btn-light btn-sm me-2" onClick={() => router.push('/hackathons')}>
+                    <i className="bi bi-lightbulb me-1"></i> Gérer les Hackathons
+                  </button>
+                  <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
+                    <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
+                  </button>
+                </div>
               </div>
               <div className="card-body">
                 {allProjects.length === 0 ? (
@@ -1368,7 +1374,7 @@ export default function Dashboard() {
                   <div className="mb-3">
                     <label htmlFor="newUserRole" className="form-label">Rôle <span className="text-danger">*</span></label>
                     <select
-                      className="form-select"
+                      className="form-control"
                       id="newUserRole"
                       value={newUserRole}
                       onChange={(e) => setNewUserRole(e.target.value)}
@@ -1398,6 +1404,7 @@ export default function Dashboard() {
         </div>
       )}
       {showAddUserModal && <div className="modal-backdrop fade show"></div>}
+
     </div>
   );
 }
