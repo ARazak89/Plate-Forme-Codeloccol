@@ -307,22 +307,19 @@ export async function createUserByAdmin(req, res) {
       });
 
       if (firstProjectTemplate) {
-        const assignedProject = await Project.create({
-          title: firstProjectTemplate.title,
-          description: firstProjectTemplate.description,
-          objectives: firstProjectTemplate.objectives,
-          specifications: firstProjectTemplate.specifications,
-          demoVideoUrl: firstProjectTemplate.demoVideoUrl,
-          exerciseStatements: firstProjectTemplate.exerciseStatements,
-          resourceLinks: firstProjectTemplate.resourceLinks,
-          size: firstProjectTemplate.size,
-          order: firstProjectTemplate.order,
-          status: "assigned", // Le statut est 'assigned' pour l'apprenant
-          student: newUser._id, // Assigné à ce nouvel apprenant
-          templateProject: firstProjectTemplate._id, // Référence au template
+        // Ajouter l'apprenant au tableau d'assignations du projet maître
+        firstProjectTemplate.assignments.push({
+          student: newUser._id,
+          status: "assigned",
+          repoUrl: "", // Initialisé vide
+          evaluations: [],
+          peerEvaluators: [],
+          staffValidator: null,
         });
+        await firstProjectTemplate.save();
 
-        newUser.projects.push(assignedProject._id);
+        // Ajouter une référence au projet maître dans les projets du nouvel utilisateur
+        newUser.projects.push(firstProjectTemplate._id);
         await newUser.save();
       }
     }

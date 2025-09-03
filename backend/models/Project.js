@@ -5,38 +5,49 @@ const projectSchema = new mongoose.Schema(
     title: { type: String, required: true },
     objectives: [{ type: String }], // Nouveau champ pour les objectifs (tableau de chaînes)
     description: String,
-    repoUrl: { type: String, required: false }, // repoUrl devient optionnel pour les projets templates
     demoVideoUrl: String, // Nouvelle URL pour la vidéo de démonstration
     specifications: [{ type: String }], // Nouvelles spécifications textuelles (passé de String à [String])
-    submissionDate: { type: Date }, // Date de soumission devient optionnelle
     status: {
       type: String,
       enum: [
-        "assigned",
-        "pending",
-        "approved",
-        "rejected",
-        "awaiting_staff_review",
-        "template",
+        "template", // Seul 'template' reste pour le projet maître
       ],
-      default: "assigned",
-    }, // Nouveau statut 'awaiting_staff_review' et 'template'
-    student: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
-    }, // student devient optionnel pour les templates
+      default: "template",
+    },
     templateProject: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
       required: false,
-    }, // Référence au projet template d'origine
+    }, // Référence au projet template d'origine (pourrait être null pour les templates racines)
     order: { type: Number, required: false }, // Ordre du projet dans le cursus (pour les templates)
     exerciseStatements: [{ type: String }], // Nouveau champ pour les énoncés d'exercice (tableau de chaînes)
     resourceLinks: [{ type: String }], // Nouveau champ pour les liens de ressources (tableau de chaînes)
-    peerEvaluators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    staffValidator: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     size: { type: String, enum: ["short", "medium", "long"], default: "short" }, // for +1/+2/+3 days
+    assignments: [
+      {
+        student: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        status: {
+          type: String,
+          enum: [
+            "assigned",
+            "pending",
+            "approved",
+            "rejected",
+            "awaiting_staff_review",
+          ],
+          default: "assigned",
+        },
+        repoUrl: { type: String, required: false },
+        submissionDate: { type: Date },
+        evaluations: [{ type: mongoose.Schema.Types.ObjectId, ref: "Evaluation" }], // Références aux évaluations pour cette assignation
+        peerEvaluators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Qui doit évaluer
+        staffValidator: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Qui doit valider si besoin
+      },
+    ],
   },
   { timestamps: true },
 );
