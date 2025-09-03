@@ -62,17 +62,60 @@ export async function createProject(req, res) {
 }
 
 export async function listMyProjects(req, res) {
-  const projects = await Project.find({
-    "assignments.student": req.user._id, // Rechercher par étudiant dans les assignations
-    "assignments.status": { $in: ['assigned', 'pending', 'approved'] }, // Filtrer par statut d'assignation
+  const studentId = req.user._id;
+
+  // 1. Trouver les projets où l'utilisateur est l'étudiant assigné
+  const myAssignedProjects = await Project.find({
+    "assignments.student": studentId,
+    "assignments.status": { $in: ['assigned', 'pending', 'approved', 'rejected'] },
   })
-    .sort({ createdAt: -1 })
     .populate({
       path: 'assignments.student',
       select: 'name',
     })
-    .populate('templateProject', 'title order'); // Populer le projet template pour la déduplication
-  res.json(projects);
+    .populate('templateProject', 'title order');
+
+  // 2. Trouver les projets où l'utilisateur est un évaluateur désigné (et non l'étudiant de l'assignation)
+  const projectsToEvaluate = await Project.find({
+    "assignments.peerEvaluators": studentId,
+    "assignments.status": 'pending', // Seules les assignations en attente d'évaluation
+    "assignments.student": { $ne: studentId }, // S'assurer que ce n'est pas son propre projet
+  })
+    .populate({
+      path: 'assignments.student',
+      select: 'name',
+    })
+    .populate('templateProject', 'title order');
+
+  // Traiter les projets assignés pour l'utilisateur
+  const formattedMyProjects = myAssignedProjects.flatMap(project => {
+    return project.assignments
+      .filter(assign => assign.student.equals(studentId))
+      .map(assign => ({
+        ...project.toObject(), // Copie du projet maître
+        ...assign.toObject(),  // Fusionner les détails de l'assignation
+        _id: assign._id,       // L'ID de l'assignation devient l'ID principal
+        projectId: project._id, // L'ID du projet maître
+        type: 'my_project',
+      }));
+  });
+
+  // Traiter les projets à évaluer par l'utilisateur
+  const formattedProjectsToEvaluate = projectsToEvaluate.flatMap(project => {
+    return project.assignments
+      .filter(assign => assign.peerEvaluators.includes(studentId) && !assign.student.equals(studentId) && assign.status === 'pending')
+      .map(assign => ({
+        ...project.toObject(),
+        ...assign.toObject(),
+        _id: assign._id,
+        projectId: project._id,
+        type: 'to_evaluate',
+        studentToEvaluate: assign.student, // L'étudiant dont le projet doit être évalué
+      }));
+  });
+
+  // Combiner les deux listes
+  res.json([...formattedMyProjects, ...formattedProjectsToEvaluate]);
 }
 
 // Nouvelle fonction pour lister TOUS les projets (pour staff/admin)
