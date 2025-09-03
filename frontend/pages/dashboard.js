@@ -137,10 +137,13 @@ export default function Dashboard() {
               return sanitizedProject;
             }
           });
-          // Trier par ordre du projet maître
-          const sortedMyProjects = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
-          
-          setMyProjects(sortedMyProjects);
+          // Filtrer et trier les projets par type
+          const myAssignedProjects = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
+          const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
+
+          setMyProjects(myAssignedProjects);
+          setEvaluationsAsEvaluator(prev => [...prev, ...projectsToEvaluateAsApprenant]); // Ajouter aux évaluations existantes
+
         } else {
           const errorData = await myProjectsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de mes projets.');
@@ -148,15 +151,24 @@ export default function Dashboard() {
       }
 
       // Fetch pending evaluations as an evaluator (for all roles that can evaluate)
-        const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
-        if (evalAsEvaluatorRes.ok) {
-          const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
-          setEvaluationsAsEvaluator(evalAsEvaluatorData);
+      // Cette section devrait maintenant compléter les évaluations à faire pour les apprenants si elles viennent d'autres sources que my-projects
+      const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
+      if (evalAsEvaluatorRes.ok) {
+        const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
+        // Nous devons fusionner evalAsEvaluatorData avec projectsToEvaluateAsApprenant pour éviter les doublons et s'assurer que tout est là.
+        // Pour l'instant, nous allons juste remplacer si on pense que la source est unique.
+        // Ou mieux : créer un nouvel état si on veut garder la distinction claire.
+        // Pour le moment, nous allons simplement les ajouter à existing evaluationsAsEvaluator
+        setEvaluationsAsEvaluator(prev => {
+          const existingIds = new Set(prev.map(evalItem => evalItem._id));
+          const newEvaluations = evalAsEvaluatorData.filter(evalItem => !existingIds.has(evalItem._id));
+          return [...prev, ...newEvaluations];
+        });
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
-        } else {
-          const errorData = await evalAsEvaluatorRes.json();
-          throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
-        }
+      } else {
+        const errorData = await evalAsEvaluatorRes.json();
+        throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
+      }
 
       // Fetch all pending evaluations for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {
@@ -702,32 +714,7 @@ export default function Dashboard() {
       )}
 
       {/* Section des évaluations de MES PROJETS SOUMIS */}
-      {me && me.role === 'apprenant' && mySubmittedEvaluations.length > 0 && (() => {
-        // Filtrer les projets en attente (exclure approved et rejected)
-        const pendingProjects = Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
-          const projectId = evaluation.project._id;
-          if (!acc[projectId]) {
-            acc[projectId] = {
-              project: evaluation.project,
-              evaluators: []
-            };
-          }
-          acc[projectId].evaluators.push(evaluation.evaluator.name);
-          if (!acc[projectId].submissionDate && evaluation.project.submissionDate) {
-            acc[projectId].submissionDate = evaluation.project.submissionDate;
-          }
-          if (!acc[projectId].status) {
-            acc[projectId].status = evaluation.project.status;
-          }
-          return acc;
-        }, {}))
-        .filter(projectGroup =>
-          projectGroup.status !== 'approved' &&
-          projectGroup.status !== 'rejected'
-        );
-
-        return pendingProjects.length > 0;
-      })() && (
+      {me && me.role === 'apprenant' && myProjects.filter(p => p.status === 'pending' || p.status === 'awaiting_staff_review').length > 0 && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
@@ -737,54 +724,29 @@ export default function Dashboard() {
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
-                  {(() => {
-                    // Filtrer les projets en attente (exclure approved et rejected)
-                    const pendingProjects = Object.values(mySubmittedEvaluations.reduce((acc, evaluation) => {
-                      const projectId = evaluation.project._id;
-                      if (!acc[projectId]) {
-                        acc[projectId] = {
-                          project: evaluation.project,
-                          evaluators: []
-                        };
-                      }
-                      acc[projectId].evaluators.push(evaluation.evaluator.name);
-                      if (!acc[projectId].submissionDate && evaluation.project.submissionDate) {
-                        acc[projectId].submissionDate = evaluation.project.submissionDate;
-                      }
-                      if (!acc[projectId].status) {
-                        acc[projectId].status = evaluation.project.status;
-                      }
-                      return acc;
-                    }, {}))
-                    .filter(projectGroup =>
-                      projectGroup.status !== 'approved' &&
-                      projectGroup.status !== 'rejected'
-                    );
-
-                    return pendingProjects.length > 0 ? (
-                      pendingProjects.map(projectGroup => (
-                      <div key={projectGroup.project._id} className="card mb-3 shadow-sm border-info">
+                  {myProjects.filter(p => p.status === 'pending' || p.status === 'awaiting_staff_review').map(project => (
+                      <div key={project.assignmentId} className="card mb-3 shadow-sm border-info">
                         <div className="card-body">
                           <h5 className="card-title d-flex align-items-center mb-2">
-                            <i className="bi bi-journal-text me-2 text-info"></i> Projet: {projectGroup.project.title}
-                            {projectGroup.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En Attente Pairs</span>}
-                            {projectGroup.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
+                            <i className="bi bi-journal-text me-2 text-info"></i> Projet: {project.title}
+                            {project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En Attente Pairs</span>}
+                            {project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
                           </h5>
-                          <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: <strong>{projectGroup.evaluators.join(', ')}</strong></p>
-                          {projectGroup.project.repoUrl && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-muted"></i> Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'projectGroup.project.repoUrl'}</a></p>}
-                          {projectGroup.submissionDate && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(projectGroup.submissionDate).toLocaleString()}</p>}
+                          <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: 
+                            {project.peerEvaluators && project.peerEvaluators.length > 0 ? 
+                              project.peerEvaluators.map(evaluator => evaluator.name || evaluator).join(', ') 
+                              : 'N/A'}
+                          </p>
+                          {project.repoUrl && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-muted"></i> Dépôt: <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{project.repoUrl}</a></p>}
+                          {project.submissionDate && <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(project.submissionDate).toLocaleString()}</p>}
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted py-3">Aucun projet soumis en attente d'évaluation.</p>
-                  );
-                })()}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
       )}
 
       {/* Section pour tous les projets assignés à l'apprenant */}
@@ -810,29 +772,24 @@ export default function Dashboard() {
                             {console.log(`Projet ${project.title} - Statut au rendu: ${project.status}`)}
                             <span className={`badge rounded-pill bg-${
                               project.status === 'assigned' ? 'warning text-dark' :
-                              project.status === 'pending' ? 'info' :
+                              project.status === 'pending' || project.status === 'awaiting_staff_review' ? 'info' :
                               'success'
                             } ms-2`}>
                               <i className={`bi bi-${
                                 project.status === 'assigned' ? 'clock' :
-                                project.status === 'pending' ? 'hourglass-split' :
+                                project.status === 'pending' || project.status === 'awaiting_staff_review' ? 'hourglass-split' :
                                 'check-circle'
                               } me-1`}></i>
                               {project.status === 'assigned' ? 'Assigné' :
                                project.status === 'pending' ? 'En cours d\'évaluation' :
+                               project.status === 'awaiting_staff_review' ? 'En attente Staff' :
                                'Approuvé'}
                             </span>
                             {project.order && (
                               <small className="text-muted ms-2">(Projet {project.order})</small>
                             )}
                           </h5>
-                          {/* <p className="card-text mb-1 text-muted d-flex align-items-center"><i className="bi bi-file-earmark-text me-2"></i> Description: {project.description}</p> */}
                         </div>
-                        {/* {project.repoUrl && (
-                          <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm d-flex align-items-center mt-2 mt-md-0">
-                            <i className="bi bi-github me-2"></i> Voir le Dépôt GitHub
-                          </a>
-                        )} */}
                       </div>
                     </div>
                   ))}
