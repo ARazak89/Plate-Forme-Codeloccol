@@ -75,6 +75,8 @@ export async function listMyProjects(req, res) {
     })
     .populate('templateProject', 'title order');
 
+  console.log("[DEBUG - listMyProjects] Raw myAssignedProjects:", JSON.stringify(myAssignedProjects, null, 2));
+
   // 2. Trouver les projets où l'utilisateur est un évaluateur désigné via les évaluations en attente
   const evaluationsToComplete = await Evaluation.find({
     evaluator: studentId,
@@ -92,6 +94,8 @@ export async function listMyProjects(req, res) {
       path: 'assignment',
       select: 'status submissionDate repoUrl',
     });
+
+  console.log("[DEBUG - listMyProjects] Raw evaluationsToComplete:", JSON.stringify(evaluationsToComplete, null, 2));
 
   // Traiter les projets assignés pour l'utilisateur
   const formattedMyProjects = myAssignedProjects.flatMap(project => {
