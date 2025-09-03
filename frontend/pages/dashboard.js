@@ -826,6 +826,7 @@ export default function Dashboard() {
                         <div className="flex-grow-1 mb-2 mb-md-0" onClick={() => router.push('/projects')} style={{ cursor: 'pointer' }}>
                           <h5 className="card-title d-flex align-items-center mb-1">
                             <i className="bi bi-folder-open me-2 text-success"></i> {project.title}
+                            {console.log(`Projet ${project.title} - Statut au rendu: ${project.status}`)}
                             <span className={`badge rounded-pill bg-${
                               project.status === 'assigned' ? 'warning text-dark' :
                               project.status === 'pending' ? 'info' :
