@@ -309,3 +309,48 @@ export async function constituteTeams(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function submitTeamProject(req, res) {
+  try {
+    const { hackathonId, teamId } = req.params;
+    const { repoUrl } = req.body;
+
+    if (!repoUrl) {
+      return res.status(400).json({ error: 'L\'URL du dépôt GitHub est obligatoire.' });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ error: 'Équipe non trouvée.' });
+    }
+
+    if (team.hackathon.toString() !== hackathonId) {
+      return res.status(400).json({ error: 'L\'équipe n\'appartient pas à ce hackathon.' });
+    }
+
+    // Vérifier si l'utilisateur qui soumet est membre de l'équipe
+    if (!team.members.some(member => member._id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à soumettre un projet pour cette équipe.' });
+    }
+
+    // Mettre à jour l'équipe avec l'URL du dépôt et la date de soumission
+    team.repoUrl = repoUrl;
+    team.submissionDate = new Date();
+    await team.save();
+
+    // Envoyer une notification aux staff/admins pour la soumission du projet de hackathon
+    const staffUsers = await User.find({ role: { $in: ['staff', 'admin'] } });
+    for (const staff of staffUsers) {
+      await Notification.create({
+        user: staff._id,
+        type: 'hackathon_project_submitted',
+        message: `Le projet de l\'équipe \'${team.name}\' a été soumis pour le hackathon \'${hackathonId}\'.`,
+      });
+    }
+
+    res.status(200).json({ message: 'Projet de hackathon soumis avec succès.', team });
+  } catch (e) {
+    console.error("Error submitting hackathon project:", e);
+    res.status(500).json({ error: e.message });
+  }
+}

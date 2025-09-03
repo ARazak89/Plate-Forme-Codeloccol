@@ -67,6 +67,12 @@ export default function Dashboard() {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('apprenant'); // Rôle par défaut
 
+  // Nouveaux états pour la soumission de projet de Hackathon
+  const [showSubmitHackathonProjectModal, setShowSubmitHackathonProjectModal] = useState(false);
+  const [currentHackathonToSubmit, setCurrentHackathonToSubmit] = useState(null);
+  const [currentTeamToSubmit, setCurrentTeamToSubmit] = useState(null);
+  const [hackathonSubmissionRepoUrl, setHackathonSubmissionRepoUrl] = useState('');
+
   // Utilisez useCallback pour memoizer fetchData et la rendre accessible
   const fetchData = useCallback(async () => {
     if (!token) return; // Ne pas exécuter si le token est null
@@ -563,6 +569,63 @@ export default function Dashboard() {
     }
   };
 
+  // Fonction pour gérer l'affichage de la modale de soumission de projet de Hackathon
+  const handleShowSubmitHackathonModal = (hackathon, team) => {
+    setCurrentHackathonToSubmit(hackathon);
+    setCurrentTeamToSubmit(team);
+    setHackathonSubmissionRepoUrl('');
+    setShowSubmitHackathonProjectModal(true);
+  };
+
+  // Fonction pour fermer la modale de soumission de projet de Hackathon
+  const handleCloseSubmitHackathonModal = () => {
+    setShowSubmitHackathonProjectModal(false);
+    setCurrentHackathonToSubmit(null);
+    setCurrentTeamToSubmit(null);
+    setHackathonSubmissionRepoUrl('');
+  };
+
+  // Fonction pour soumettre le projet de Hackathon
+  const handleSubmitHackathonProject = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    if (!currentHackathonToSubmit || !currentTeamToSubmit || !hackathonSubmissionRepoUrl) {
+      setError('Veuillez remplir tous les champs requis pour soumettre le projet.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/api/hackathons/${currentHackathonToSubmit._id}/submit-project`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          teamId: currentTeamToSubmit._id,
+          repoUrl: hackathonSubmissionRepoUrl,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(data.message);
+        handleCloseSubmitHackathonModal();
+        fetchData(); // Recharger les données du tableau de bord pour refléter la soumission
+      } else {
+        throw new Error(data.error || 'Échec de la soumission du projet de Hackathon.');
+      }
+    } catch (e) {
+      console.error("Error submitting hackathon project:", e);
+      setError(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!token) return <div className="text-center mt-5"><p className="lead">Veuillez vous connecter.</p></div>;
 
   if (isLoading) {
@@ -784,13 +847,67 @@ export default function Dashboard() {
       {me && me.role === 'apprenant' && (
         <div className="row mb-4">
           <div className="col-lg-6 mb-4">
-            <HackathonList hackathons={hackathons} />
+            <HackathonList 
+              hackathons={hackathons} 
+              me={me} 
+              onShowSubmitHackathonModal={handleShowSubmitHackathonModal} 
+            />
           </div>
           <div className="col-lg-6 mb-4">
             <BadgeDisplay badges={badges} />
           </div>
         </div>
       )}
+
+      {/* Modale pour la soumission de projet de Hackathon */}
+      {me && me.role === 'apprenant' && showSubmitHackathonProjectModal && (
+        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header bg-gradient bg-primary text-white">
+                <h5 className="modal-title"><i className="bi bi-upload me-2"></i> Soumettre le Projet pour Hackathon: {currentHackathonToSubmit?.title}</h5>
+                <button type="button" className="btn-close" onClick={handleCloseSubmitHackathonModal}></button>
+              </div>
+              <div className="modal-body">
+                {error && <div className="alert alert-danger mb-3" role="alert">{error}</div>}
+                {success && <div className="alert alert-success mb-3" role="alert">{success}</div>}
+                <form onSubmit={handleSubmitHackathonProject}>
+                  <div className="mb-3">
+                    <label htmlFor="hackathonSubmissionRepoUrl" className="form-label">URL du Dépôt GitHub <span className="text-danger">*</span></label>
+                    <input
+                      type="url"
+                      className="form-control"
+                      id="hackathonSubmissionRepoUrl"
+                      value={hackathonSubmissionRepoUrl}
+                      onChange={(e) => setHackathonSubmissionRepoUrl(e.target.value)}
+                      placeholder="Ex: https://github.com/mon-equipe/mon-projet-hackathon"
+                      required
+                    />
+                    <small className="form-text text-muted">Veuillez fournir l'URL de votre dépôt GitHub pour le projet de hackathon.</small>
+                  </div>
+                  <div className="mb-3">
+                    <p className="mb-1"><strong>Hackathon:</strong> {currentHackathonToSubmit?.title}</p>
+                    <p className="mb-1"><strong>Votre équipe:</strong> {currentTeamToSubmit?.name}</p>
+                  </div>
+                  <button type="submit" className="btn btn-primary d-flex align-items-center" disabled={isLoading || !hackathonSubmissionRepoUrl}>
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Soumission en cours...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-upload me-2"></i> Soumettre le Projet
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {me && me.role === 'apprenant' && showSubmitHackathonProjectModal && <div className="modal-backdrop fade show"></div>}
 
       {/* Section des évaluations que JE DOIS FAIRE (en tant qu'évaluateur) */}
       {me && (me.role === 'apprenant' || me.role === 'staff' || me.role === 'admin') && (

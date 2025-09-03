@@ -18,6 +18,13 @@ const TeamSchema = new mongoose.Schema({
     ref: 'Hackathon',
     required: true,
   },
+  repoUrl: {
+    type: String,
+    trim: true,
+  },
+  submissionDate: {
+    type: Date,
+  },
   // Vous pouvez ajouter d'autres champs si nécessaire, comme un chef d'équipe, etc.
 }, { timestamps: true });
 

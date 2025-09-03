@@ -10,6 +10,7 @@ import {
   getHackathonRankings,
   listAvailableLearners,
   constituteTeams,
+  submitTeamProject,
 } from "../controllers/hackathonController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const r = Router();
@@ -28,4 +29,5 @@ r.post(
 r.get("/:id/rankings", requireAuth, getHackathonRankings); // Nouvelle route pour récupérer les classements de hackathon
 r.get("/available-learners", requireAuth, requireRole(["staff", "admin"]), listAvailableLearners); // Nouvelle route pour récupérer les apprenants disponibles
 r.post("/:id/constitute-teams", requireAuth, requireRole(["staff", "admin"]), constituteTeams); // Nouvelle route pour constituer les équipes d'un hackathon
+r.post("/:hackathonId/teams/:teamId/submit-project", requireAuth, submitTeamProject); // Nouvelle route pour la soumission de projet par équipe
 export default r;
