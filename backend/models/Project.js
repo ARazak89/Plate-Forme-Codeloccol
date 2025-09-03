@@ -7,7 +7,7 @@ const projectSchema = new mongoose.Schema(
     description: String,
     repoUrl: { type: String, required: false }, // repoUrl devient optionnel pour les projets templates
     demoVideoUrl: String, // Nouvelle URL pour la vidéo de démonstration
-    specifications: String, // Nouvelles spécifications textuelles
+    specifications: [{ type: String }], // Nouvelles spécifications textuelles (passé de String à [String])
     submissionDate: { type: Date }, // Date de soumission devient optionnelle
     status: {
       type: String,
