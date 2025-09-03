@@ -43,7 +43,7 @@ r.get("/github-repo-title", requireAuth, getGithubRepoTitle); // Obtenir le titr
 r.get("/all", requireAuth, requireRole(["staff", "admin"]), listAllProjects);
 
 r.get("/:id", requireAuth, getProjectDetails); // Détails d'un projet spécifique (pour l'apprenant)
-r.post("/:id/submit-solution", requireAuth, submitProjectSolution); // Soumettre la solution d'un projet
+r.post("/:id/submit", requireAuth, submitProjectSolution); // Soumettre la solution d'un projet
 
 // Routes pour la validation/évaluation (Staff/Admin/Apprenant)
 r.post(
