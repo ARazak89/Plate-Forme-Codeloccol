@@ -63,11 +63,14 @@ export async function createProject(req, res) {
 
 export async function listMyProjects(req, res) {
   const projects = await Project.find({
-    student: req.user._id,
-    status: { $in: ['assigned', 'pending', 'approved'] },
+    "assignments.student": req.user._id, // Rechercher par étudiant dans les assignations
+    "assignments.status": { $in: ['assigned', 'pending', 'approved'] }, // Filtrer par statut d'assignation
   })
     .sort({ createdAt: -1 })
-    .populate('student', 'name') // Populer le nom de l'étudiant si besoin pour l'affichage
+    .populate({
+      path: 'assignments.student',
+      select: 'name',
+    })
     .populate('templateProject', 'title order'); // Populer le projet template pour la déduplication
   res.json(projects);
 }
@@ -75,9 +78,15 @@ export async function listMyProjects(req, res) {
 // Nouvelle fonction pour lister TOUS les projets (pour staff/admin)
 export async function listAllProjects(req, res) {
   try {
-    const projects = await Project.find({})
-      .populate('student', 'name email') // Populer les informations de l'étudiant assigné
-      .populate('templateProject', 'title order') // Populer le projet template
+    const projects = await Project.find({ status: 'template' }) // Lister uniquement les projets maîtres (templates)
+      .populate({
+        path: 'assignments.student',
+        select: 'name email',
+      })
+      .populate({
+        path: 'assignments.evaluations',
+        populate: { path: 'evaluator', select: 'name' },
+      })
       .sort({ createdAt: -1 });
     res.status(200).json(projects);
   } catch (e) {
@@ -160,23 +169,34 @@ export async function getProjectDetails(req, res) {
 // Nouvelle fonction pour un apprenant pour soumettre sa solution à un projet
 export async function submitProjectSolution(req, res) {
   try {
-    const { id } = req.params; // ID du projet (l'instance assignée à l'étudiant)
-    const { repoUrl, selectedSlotIds } = req.body; // Maintenant, attend aussi les IDs des slots
+    const { id: projectId } = req.params; // ID du projet maître
+    const { assignmentId, repoUrl, selectedSlotIds } = req.body; // Attendre l'ID de l'assignation
     const studentId = req.user._id;
 
-    // Vérifier si le projet existe et est assigné à cet étudiant
-    const project = await Project.findOne({ _id: id, student: studentId });
+    if (!assignmentId) {
+      return res.status(400).json({ error: 'ID d\'assignation manquant.' });
+    }
+
+    // Trouver le projet maître et l'assignation spécifique
+    const project = await Project.findOne({
+      _id: projectId,
+      "assignments._id": assignmentId,
+      "assignments.student": studentId,
+    });
+
     if (!project) {
       return res
         .status(404)
-        .json({ error: 'Projet non trouvé ou non assigné à cet étudiant.' });
+        .json({ error: 'Projet ou assignation non trouvé(e) pour cet étudiant.' });
     }
 
-    // S'assurer que le projet n'a pas déjà été soumis/approuvé/rejeté, et qu'il est en statut 'assigned'
-    if (project.status !== 'assigned') {
+    const assignment = project.assignments.id(assignmentId);
+
+    // S'assurer que l'assignation n'a pas déjà été soumise/approuvée/rejetée, et qu'elle est en statut 'assigned'
+    if (assignment.status !== 'assigned') {
       return res.status(400).json({
         error:
-          'Ce projet n\'est pas en statut \'assigned\' et ne peut être soumis.',
+          'Cette assignation n\'est pas en statut \'assigned\' et ne peut être soumise.',
       });
     }
 
@@ -189,7 +209,8 @@ export async function submitProjectSolution(req, res) {
     const slotsResult = await _validateAndBookSlots(
       selectedSlotIds,
       studentId,
-      id,
+      projectId, // Passer l'ID du projet maître
+      assignmentId, // Passer l'ID de l'assignation
       repoUrl,
     );
     if (slotsResult.error) {
@@ -198,16 +219,18 @@ export async function submitProjectSolution(req, res) {
     const slots = slotsResult.slots;
     // *** Fin de la logique des slots ***
 
-    // Mettre à jour le projet avec l'URL du dépôt et la date de soumission
-    project.repoUrl = repoUrl;
-    project.submissionDate = new Date();
-    project.status = 'pending'; // Le statut reste 'pending' après soumission
-    await project.save();
+    // Mettre à jour l'assignation spécifique avec l'URL du dépôt et la date de soumission
+    assignment.repoUrl = repoUrl;
+    assignment.submissionDate = new Date();
+    assignment.status = 'pending'; // Le statut de l'assignation devient 'pending' après soumission
+    assignment.peerEvaluators = slots.map(slot => slot.evaluator._id); // Ajouter les évaluateurs désignés
+    await project.save(); // Sauvegarder le projet maître pour persister les changements dans l'assignation
 
     // Notifier le staff et les évaluateurs choisis et créer les évaluations
     const submittingStudent = await User.findById(studentId); // Récupérer le nom de l'apprenant
     await _createEvaluationsAndNotifications(
-      id,
+      projectId, // Passer l'ID du projet maître
+      assignmentId, // Passer l'ID de l'assignation
       studentId,
       project.title,
       repoUrl,
@@ -359,6 +382,7 @@ async function _handleBadgeAttribution(student) {
 // Fonction d'aide pour créer les évaluations et envoyer les notifications
 async function _createEvaluationsAndNotifications(
   projectId,
+  assignmentId,
   studentId,
   projectTitle,
   repoUrl,
@@ -403,6 +427,7 @@ async function _validateAndBookSlots(
   selectedSlotIds,
   studentId,
   projectId,
+  assignmentId,
   repoUrl,
 ) {
   // Supprimer 'res' des paramètres
@@ -459,6 +484,7 @@ async function _validateAndBookSlots(
     slot.isBooked = true;
     slot.bookedByStudent = studentId;
     slot.bookedForProject = projectId;
+    slot.bookedForAssignment = assignmentId; // Ajouter l'ID de l'assignation
     await slot.save();
   }
   return { slots }; // Retourner les slots dans un objet
@@ -473,30 +499,37 @@ async function _assignNextProjectToStudent(student, currentProjectTemplate) {
     });
 
     if (nextProjectTemplate) {
-      const assignedNextProject = await Project.create({
-        title: nextProjectTemplate.title,
-        description: nextProjectTemplate.description,
-        specifications: nextProjectTemplate.specifications,
-        demoVideoUrl: nextProjectTemplate.demoVideoUrl,
-        exerciseStatements: nextProjectTemplate.exerciseStatements, // Inclure les énoncés d'exercice
-        resourceLinks: nextProjectTemplate.resourceLinks, // Inclure les liens de ressources
-        objectives: nextProjectTemplate.objectives, // Inclure les objectifs
-        size: nextProjectTemplate.size,
+      // Vérifier si l'étudiant est déjà assigné à ce projet template
+      const existingAssignment = nextProjectTemplate.assignments.some(assign => assign.student.equals(student._id));
+      if (existingAssignment) {
+        console.log(`L\'étudiant ${student.name} est déjà assigné au projet ${nextProjectTemplate.title}.`);
+        return; // Ne pas réassigner le même projet
+      }
+
+      // Ajouter une nouvelle assignation au tableau d'assignations du projet maître suivant
+      nextProjectTemplate.assignments.push({
         student: student._id,
         status: 'assigned',
-        templateProject: nextProjectTemplate._id,
+        repoUrl: "",
+        evaluations: [],
+        peerEvaluators: [],
+        staffValidator: null,
       });
+      await nextProjectTemplate.save();
 
-      student.projects.push(assignedNextProject._id);
-      // Ne pas sauvegarder l'étudiant ici, cela sera fait par la fonction appelante
+      // Ajouter une référence au projet maître dans les projets de l'étudiant si elle n'est pas déjà présente
+      if (!student.projects.includes(nextProjectTemplate._id)) {
+        student.projects.push(nextProjectTemplate._id);
+      }
+      // La sauvegarde de l'étudiant sera gérée par la fonction appelante (approveProject ou submitFinalStaffEvaluation)
 
       await Notification.create({
         user: student._id,
         type: 'project_assigned',
-        message: `Un nouveau projet, \'${assignedNextProject.title}\', vous a été assigné après l'approbation de votre précédent projet.`, 
+        message: `Un nouveau projet, \'${nextProjectTemplate.title}\', vous a été assigné après l'approbation de votre précédent projet.`, 
       });
       console.log(
-        `Assigned next project \'${assignedNextProject.title}\' to ${student.name}.`,
+        `Assigned next project \'${nextProjectTemplate.title}\' to ${student.name} by adding to assignments array.`,
       );
     } else {
       console.log(
@@ -604,39 +637,73 @@ export async function submitPeerEvaluation(req, res) {
 
 export async function updateProject(req, res) {
   try {
-    const { id } = req.params;
-    const { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks, objectives } = req.body; // Ajout de objectives
+    const { id: projectId } = req.params; // ID du projet maître
+    const { assignmentId, title, description, demoVideoUrl, specifications, size, order, exerciseStatements, resourceLinks, objectives, repoUrl } = req.body; // Inclure assignmentId et repoUrl ici
 
-    console.log(`[updateProject] Tentative de modification du projet avec ID: ${id} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
-    const project = await Project.findById(id);
+    console.log(`[updateProject] Tentative de modification du projet avec ID: ${projectId}, Assignment ID: ${assignmentId} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
+
+    const project = await Project.findById(projectId);
     if (!project) {
-      console.warn(`[updateProject] Projet non trouvé pour l\'ID: ${id}`);
-      return res.status(404).json({ error: 'Projet non trouvé.' });
+      console.warn(`[updateProject] Projet maître non trouvé pour l\'ID: ${projectId}`);
+      return res.status(404).json({ error: 'Projet maître non trouvé.' });
     }
-    console.log(`[updateProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
-    // Vérifier si l'utilisateur est un membre du personnel/admin OU le propriétaire du projet
     const isStaffOrAdmin = req.user.role === 'staff' || req.user.role === 'admin';
-    const isOwner = project.student && project.student.equals(req.user._id);
 
-    if (!isStaffOrAdmin && !isOwner) {
-      console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}. IsStaffOrAdmin: ${isStaffOrAdmin}, IsOwner: ${isOwner}`);
-      return res
-        .status(403)
-        .json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet.' });
+    if (assignmentId) {
+      // Logique pour modifier une assignation spécifique
+      const assignment = project.assignments.id(assignmentId);
+      if (!assignment) {
+        console.warn(`[updateProject] Assignation non trouvée pour l\'ID: ${assignmentId} dans le projet ${projectId}`);
+        return res.status(404).json({ error: 'Assignation non trouvée.' });
+      }
+
+      // Un étudiant ne peut modifier que son repoUrl et si le statut est 'assigned' ou 'rejected'
+      const isStudentOwner = assignment.student.equals(req.user._id);
+      if (!isStaffOrAdmin && (!isStudentOwner || (assignment.status !== 'assigned' && assignment.status !== 'rejected'))) {
+        console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur l\'assignation ${assignmentId}. Student ID: ${assignment.student}, User Role: ${req.user.role}, Assignment Status: ${assignment.status}`);
+        return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à modifier cette assignation.' });
+      }
+
+      if (repoUrl !== undefined) {
+        if (!validateGithubUrl(repoUrl)) {
+          return res.status(400).json({ error: 'URL GitHub invalide.' });
+        }
+        assignment.repoUrl = repoUrl; // Mettre à jour seulement repoUrl pour l'assignation
+      }
+
+      // Le staff/admin peut modifier le statut d'une assignation directement ici si nécessaire, ou d'autres champs d'assignation.
+      // Pour l'instant, on se concentre sur repoUrl pour l'étudiant.
+
+      await project.save(); // Sauvegarder le projet maître pour persister les changements dans l'assignation
+
+      console.log(`[updateProject] Assignation ${assignmentId} mise à jour avec succès.`);
+      return res.status(200).json({ message: 'Assignation mise à jour avec succès.', assignment });
+
+    } else {
+      // Logique pour modifier le projet maître (seulement par staff/admin)
+      if (!isStaffOrAdmin) {
+        console.warn(`[updateProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet maître ${projectId}. User Role: ${req.user.role}`);
+        return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à modifier ce projet maître.' });
+      }
+
+      // Mettre à jour les champs du projet maître
+      project.title = title !== undefined ? title : project.title;
+      project.description = description !== undefined ? description : project.description;
+      project.demoVideoUrl = demoVideoUrl !== undefined ? demoVideoUrl : project.demoVideoUrl;
+      project.specifications = specifications !== undefined ? specifications : project.specifications;
+      project.size = size !== undefined ? size : project.size;
+      project.order = order !== undefined ? order : project.order;
+      project.exerciseStatements = exerciseStatements !== undefined ? exerciseStatements : project.exerciseStatements;
+      project.resourceLinks = resourceLinks !== undefined ? resourceLinks : project.resourceLinks;
+      project.objectives = objectives !== undefined ? objectives : project.objectives;
+
+      await project.save();
+
+      console.log(`[updateProject] Projet maître ${projectId} mis à jour avec succès.`);
+      return res.status(200).json({ message: 'Projet maître mis à jour avec succès.', project });
     }
 
-    if (repoUrl && !validateGithubUrl(repoUrl))
-      return res.status(400).json({ error: 'URL GitHub invalide' });
-    
-    console.log(`[updateProject] Autorisation accordée. Mise à jour du projet ${project.title}`);
-    const updatedProject = await Project.findByIdAndUpdate(
-      id,
-      { title, description, repoUrl, size, peerEvaluators, exerciseStatements, resourceLinks, objectives }, // Inclure objectives
-      { new: true, runValidators: true },
-    );
-
-    res.json(updatedProject);
   } catch (e) {
     console.error("Error in updateProject:", e);
     res.status(500).json({ error: e.message });
@@ -645,32 +712,66 @@ export async function updateProject(req, res) {
 
 export async function deleteProject(req, res) {
   try {
-    const { id } = req.params;
+    const { id: projectId } = req.params; // ID du projet maître
+    const { assignmentId } = req.body; // ID de l'assignation (optionnel)
 
-    console.log(`[deleteProject] Tentative de suppression du projet avec ID: ${id} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
-    const project = await Project.findById(id);
+    console.log(`[deleteProject] Tentative de suppression du projet avec ID: ${projectId}, Assignment ID: ${assignmentId || 'N/A'} par l\'utilisateur: ${req.user._id} (${req.user.role})`);
+
+    const project = await Project.findById(projectId);
     if (!project) {
-      console.warn(`[deleteProject] Projet non trouvé pour l\'ID: ${id}`);
+      console.warn(`[deleteProject] Projet maître non trouvé pour l\'ID: ${projectId}`);
       return res.status(404).json({ error: 'Projet non trouvé.' });
     }
-    console.log(`[deleteProject] Projet trouvé: ${project.title}, Student ID: ${project.student}, User Role: ${req.user.role}`);
 
-    // Vérifier si l'utilisateur est un membre du personnel/admin OU le propriétaire du projet
     const isStaffOrAdmin = req.user.role === 'staff' || req.user.role === 'admin';
-    const isOwner = project.student && project.student.equals(req.user._id);
 
-    if (!isStaffOrAdmin && !isOwner) {
-      console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet ${id}. Student ID: ${project.student}, User Role: ${req.user.role}. IsStaffOrAdmin: ${isStaffOrAdmin}, IsOwner: ${isOwner}`);
-      return res
-        .status(403)
-        .json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet.' });
+    if (assignmentId) {
+      // Supprimer une assignation spécifique
+      const assignment = project.assignments.id(assignmentId);
+      if (!assignment) {
+        console.warn(`[deleteProject] Assignation non trouvée pour l\'ID: ${assignmentId} dans le projet ${projectId}`);
+        return res.status(404).json({ error: 'Assignation non trouvée.' });
+      }
+
+      // Seul le staff/admin peut supprimer une assignation
+      if (!isStaffOrAdmin) {
+        console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur l\'assignation ${assignmentId}. User Role: ${req.user.role}`);
+        return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à supprimer cette assignation.' });
+      }
+
+      // Supprimer les évaluations associées à cette assignation
+      await Evaluation.deleteMany({ assignment: assignmentId });
+
+      assignment.remove(); // Supprimer le sous-document de l'assignation
+      await project.save(); // Sauvegarder le projet maître
+
+      console.log(`[deleteProject] Assignation ${assignmentId} supprimée avec succès du projet ${projectId}.`);
+      return res.status(200).json({ message: 'Assignation supprimée avec succès.' });
+
+    } else {
+      // Supprimer un projet maître complet
+      // Seul le staff/admin peut supprimer un projet maître
+      if (!isStaffOrAdmin) {
+        console.warn(`[deleteProject] Autorisation refusée pour l\'utilisateur ${req.user._id} sur le projet maître ${projectId}. User Role: ${req.user.role}`);
+        return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à supprimer ce projet maître.' });
+      }
+
+      // Supprimer toutes les évaluations associées à toutes les assignations de ce projet maître
+      const assignmentIds = project.assignments.map(assign => assign._id);
+      await Evaluation.deleteMany({ assignment: { $in: assignmentIds } });
+
+      await Project.findByIdAndDelete(projectId); // Supprimer le projet maître
+
+      // Mettre à jour les références dans les documents utilisateur
+      await User.updateMany(
+        { projects: projectId },
+        { $pull: { projects: projectId } }
+      );
+
+      console.log(`[deleteProject] Projet maître ${projectId} et toutes ses assignations/évaluations supprimés avec succès.`);
+      return res.status(200).json({ message: 'Projet maître et toutes ses assignations supprimés avec succès.' });
     }
 
-    console.log(`[deleteProject] Autorisation accordée. Suppression du projet ${project.title}`);
-    await Project.findByIdAndDelete(id);
-    await Evaluation.deleteMany({ project: id }); // Supprimer toutes les évaluations associées
-
-    res.status(200).json({ message: 'Projet supprimé avec succès.' });
   } catch (e) {
     console.error("Error in deleteProject:", e);
     res.status(500).json({ error: e.message });

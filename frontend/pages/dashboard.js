@@ -1053,13 +1053,13 @@ export default function Dashboard() {
                       <div className="d-flex flex-column flex-md-row mt-2 mt-md-0">
                         <button
                           className="btn btn-sm btn-success mt-2 mt-md-0 me-md-2"
-                          onClick={() => handleFinalStaffReview(project._id, 'approved')}
+                          onClick={() => handleFinalStaffReview(project.projectId, project.assignmentId, 'approved')}
                         >
                           <i className="bi bi-check-circle me-1"></i> Approuver
                         </button>
                         <button
                           className="btn btn-sm btn-danger mt-2 mt-md-0"
-                          onClick={() => handleFinalStaffReview(project._id, 'rejected')}
+                          onClick={() => handleFinalStaffReview(project.projectId, project.assignmentId, 'rejected')}
                         >
                           <i className="bi bi-x-circle me-1"></i> Rejeter
                         </button>
@@ -1521,7 +1521,7 @@ export default function Dashboard() {
 }
 
 // Fonction pour gérer l'évaluation finale par le personnel
-const handleFinalStaffReview = async (projectId, status) => {
+const handleFinalStaffReview = async (projectId, assignmentId, status) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (!token) {
     alert('Vous devez être connecté pour effectuer cette action.');
@@ -1535,7 +1535,7 @@ const handleFinalStaffReview = async (projectId, status) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ assignmentId, status }), // Inclure l'ID d'assignation
     });
 
     const data = await res.json();
