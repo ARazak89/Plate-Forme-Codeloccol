@@ -86,7 +86,7 @@ export default function Dashboard() {
       }
       const userData = await userRes.json();
       setMe(userData);
-      setProjects(userData.projects || []);
+      // setProjects(userData.projects || []); // Ancienne ligne, non utilisée directement pour les apprenants
       setHackathons(userData.hackathons || []);
       setBadges(userData.badges || []);
       setProgress(userData.progress || null);
@@ -155,15 +155,8 @@ export default function Dashboard() {
       const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
       if (evalAsEvaluatorRes.ok) {
         const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
-        // Nous devons fusionner evalAsEvaluatorData avec projectsToEvaluateAsApprenant pour éviter les doublons et s'assurer que tout est là.
-        // Pour l'instant, nous allons juste remplacer si on pense que la source est unique.
-        // Ou mieux : créer un nouvel état si on veut garder la distinction claire.
-        // Pour le moment, nous allons simplement les ajouter à existing evaluationsAsEvaluator
-        setEvaluationsAsEvaluator(prev => {
-          const existingIds = new Set(prev.map(evalItem => evalItem._id));
-          const newEvaluations = evalAsEvaluatorData.filter(evalItem => !existingIds.has(evalItem._id));
-          return [...prev, ...newEvaluations];
-        });
+        // Nous allons remplacer complètement l'état evaluationsAsEvaluator avec les nouvelles données
+        setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
       } else {
         const errorData = await evalAsEvaluatorRes.json();
@@ -879,12 +872,7 @@ export default function Dashboard() {
                 <ul className="list-group list-group-flush">
                   {me.role === 'apprenant' ? (
                     // Affichage pour l'apprenant
-                    upcomingEvaluations.filter(evaluation => {
-                      const evaluationEndTime = new Date(evaluation.slot.endTime);
-                      const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000); // Ajoute 2 heures en millisecondes
-                      const currentTime = new Date();
-                      return currentTime < twoHoursAfterEndTime;
-                    }).map((evaluation) => {
+                    upcomingEvaluations.map((evaluation) => {
                       const evaluationStartTime = new Date(evaluation.slot.startTime);
                       const evaluationEndTime = new Date(evaluation.slot.endTime);
                     const now = new Date();
