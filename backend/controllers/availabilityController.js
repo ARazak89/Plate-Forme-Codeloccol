@@ -222,27 +222,25 @@ export async function getAvailableSlotsForProject(req, res) {
 
     console.log(`[getAvailableSlotsForProject] Received - ProjectId: ${projectId}, AssignmentId: ${assignmentId}, StudentId: ${studentId}`);
 
-    // Trouver le projet maître qui contient l'assignation avec l'assignmentId donné
-    const project = await Project.findOne({
-      'assignments._id': assignmentId, // Chercher l'assignation par son ID dans le tableau
-      'assignments.student': studentId // S'assurer que c'est l'assignation de cet étudiant
-    }).populate('assignments.student');
+    // Chercher le projet maître par son ID directement
+    const project = await Project.findById(projectId).populate({
+      path: 'assignments.student',
+      select: 'name'
+    });
 
     if (!project) {
       return res.status(404).json({
-        error: 'Assignation de projet non trouvée, ou non assignée à cet étudiant.'
+        error: 'Projet non trouvé.'
       });
     }
 
-    // Vérifier que le projectId fourni dans l'URL correspond bien à l'_id du projet maître trouvé
-    if (project._id.toString() !== projectId) {
-      return res.status(400).json({ error: 'Incohérence entre projectId et assignmentId.' });
-    }
-
+    // Trouver l'assignation pertinente dans le projet
     const relevantAssignment = project.assignments.id(assignmentId);
 
-    if (!relevantAssignment) {
-        return res.status(404).json({ error: 'Assignation de projet non trouvée.' });
+    if (!relevantAssignment || !relevantAssignment.student.equals(studentId)) {
+      return res.status(404).json({
+        error: 'Assignation de projet non trouvée, ou non assignée à cet étudiant.'
+      });
     }
 
     if (relevantAssignment.status === 'approved' || relevantAssignment.status === 'rejected') {
