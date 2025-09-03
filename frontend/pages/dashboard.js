@@ -106,7 +106,6 @@ export default function Dashboard() {
           // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
           // Nous devons formater ces données pour qu'elles soient compatibles avec l'UI existante si nécessaire
           const formattedStudentProjects = rawMyProjectsData.map(project => {
-            // Le backend devrait déjà fusionner le projet maître et l'assignation pour l'apprenant.
             // Ici, nous nous assurons que les propriétés sont des tableaux pour éviter les erreurs R.map
             const sanitizedProject = {
               ...project,
@@ -114,15 +113,24 @@ export default function Dashboard() {
               specifications: project.specifications || [],
               exerciseStatements: project.exerciseStatements || [],
               resourceLinks: project.resourceLinks || [],
-              evaluations: (project.evaluations || []).map(evalItem => ({
-                ...evalItem,
-                evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
-              })),
-              student: project.student ? { _id: project.student._id, name: project.student.name, email: project.student.email } : null, // S'assurer que student est un objet
             };
-            return sanitizedProject;
-          });
+            const assignment = sanitizedProject.assignments && sanitizedProject.assignments.length > 0 ? sanitizedProject.assignments[0] : null;
 
+            if (assignment) {
+              return {
+                ...sanitizedProject, // Détails du projet maître
+                ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
+                assignmentId: assignment._id, // Ajouter l'ID de l'assignation pour faciliter l'utilisation
+                student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Références directes pour compatibilité UI
+                evaluations: (assignment.evaluations || []).map(evalItem => ({
+                  ...evalItem,
+                  evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
+                })),
+              };
+            } else {
+              return sanitizedProject;
+            }
+          });
           // Trier par ordre du projet maître
           const sortedMyProjects = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
           
