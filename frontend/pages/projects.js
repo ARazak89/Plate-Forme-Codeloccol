@@ -417,11 +417,6 @@ function ProjectsPage() {
     setSuccess(null);
     setLoading(true);
 
-    const isRepoUrlOptional = [
-      "CLI (Command Line Interface)",
-      "Pratique guidée Git / GitHub"
-    ].includes(currentProjectToSubmit?.title);
-
     if (!currentProjectToSubmit || selectedSlotIds.length !== 2 || (!isRepoUrlOptional && !projectSubmissionRepoUrl)) {
       let errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
       if (!isRepoUrlOptional && !projectSubmissionRepoUrl) {
@@ -487,6 +482,12 @@ function ProjectsPage() {
     setError(null);
     setSuccess(null);
   };
+
+  // Déplacer la définition de isRepoUrlOptional ici pour la rendre disponible dans le JSX de la modale
+  const isRepoUrlOptional = [
+    "CLI (Command Line Interface)",
+    "Pratique guidée Git / GitHub"
+  ].includes(currentProjectToSubmit?.title);
 
   if (loading) return (
     <div className="d-flex justify-content-center align-items-center vh-100">
