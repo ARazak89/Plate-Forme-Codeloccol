@@ -652,6 +652,7 @@ function ProjectsPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            console.log('Opening submit modal for Project:', project.title, 'projectId:', project.projectId, 'assignmentId:', project.assignmentId);
                             handleOpenSubmitProjectModal(project);
                           }}
                           className="btn btn-primary w-100 btn-sm"
