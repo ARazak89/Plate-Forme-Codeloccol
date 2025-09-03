@@ -217,19 +217,35 @@ export async function getMyCreatedSlots(req, res) {
 // Fonction pour récupérer les créneaux disponibles pour un projet spécifique
 export async function getAvailableSlotsForProject(req, res) {
   try {
-    const { projectId } = req.params;
+    const { projectId, assignmentId } = req.params; // projectId est ici l'ID du projet maître
     const studentId = req.user._id;
 
-    // Vérifier que le projet existe et est assigné à cet étudiant
-    const project = await Project.findOne({ 
-      _id: projectId, 
-      student: studentId,
-      status: 'assigned'
-    });
+    // Trouver le projet maître qui contient l'assignation avec l'assignmentId donné
+    const project = await Project.findOne({
+      'assignments._id': assignmentId, // Chercher l'assignation par son ID dans le tableau
+      'assignments.student': studentId // S'assurer que c'est l'assignation de cet étudiant
+    }).populate('assignments.student');
 
     if (!project) {
-      return res.status(404).json({ 
-        error: 'Projet non trouvé ou non assigné à cet étudiant, ou déjà soumis.' 
+      return res.status(404).json({
+        error: 'Assignation de projet non trouvée, ou non assignée à cet étudiant.'
+      });
+    }
+
+    // Vérifier que le projectId fourni dans l'URL correspond bien à l'_id du projet maître trouvé
+    if (project._id.toString() !== projectId) {
+      return res.status(400).json({ error: 'Incohérence entre projectId et assignmentId.' });
+    }
+
+    const relevantAssignment = project.assignments.id(assignmentId);
+
+    if (!relevantAssignment) {
+        return res.status(404).json({ error: 'Assignation de projet non trouvée.' });
+    }
+
+    if (relevantAssignment.status === 'approved' || relevantAssignment.status === 'rejected') {
+      return res.status(400).json({
+        error: 'Cette assignation de projet a déjà été évaluée.'
       });
     }
 
@@ -240,7 +256,7 @@ export async function getAvailableSlotsForProject(req, res) {
       startTime: { $gt: now }, // Seulement les slots futurs
       evaluator: { $ne: studentId } // L'étudiant ne peut pas s'évaluer lui-même
     })
-    .populate('evaluator', '_id') // Ne récupérer que l'ID de l'évaluateur
+    .populate('evaluator', 'name') // Populer le nom de l'évaluateur
     .sort('startTime');
 
     // Grouper les slots par évaluateur pour vérifier qu'il y a au moins 2 évaluateurs différents
@@ -249,6 +265,7 @@ export async function getAvailableSlotsForProject(req, res) {
       if (!acc[evaluatorId]) {
         acc[evaluatorId] = {
           evaluatorId: slot.evaluator._id,
+          evaluatorName: slot.evaluator.name, // Inclure le nom de l'évaluateur
           slots: []
         };
       }
@@ -258,25 +275,24 @@ export async function getAvailableSlotsForProject(req, res) {
 
     // Convertir en tableau et s'assurer qu'il y a au moins 2 évaluateurs différents
     const evaluatorsWithSlots = Object.values(slotsByEvaluator);
-    
+
     if (evaluatorsWithSlots.length < 2) {
-      return res.status(400).json({ 
-        error: 'Il n\'y a pas assez d\'évaluateurs disponibles. Au moins 2 évaluateurs différents sont nécessaires.' 
+      return res.status(400).json({
+        error: 'Il n\'y a pas assez d\'évaluateurs disponibles. Au moins 2 évaluateurs différents sont nécessaires.'
       });
     }
 
-    // Retourner les slots sans les informations de l'évaluateur
-    const slotsWithoutEvaluatorInfo = availableSlots.map(slot => ({
+    const slotsWithEvaluatorInfo = availableSlots.map(slot => ({
       _id: slot._id,
       startTime: slot.startTime,
       endTime: slot.endTime,
       evaluator: {
-        _id: slot.evaluator._id
-        // Pas de nom ni d'email pour masquer l'identité de l'évaluateur
+        _id: slot.evaluator._id,
+        name: slot.evaluator.name
       }
     }));
 
-    res.status(200).json(slotsWithoutEvaluatorInfo);
+    res.status(200).json(slotsWithEvaluatorInfo);
   } catch (e) {
     console.error('Error fetching available slots for project:', e);
     res.status(500).json({ error: e.message });
