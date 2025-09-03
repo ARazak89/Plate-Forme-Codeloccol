@@ -97,15 +97,13 @@ function ProjectsPage() {
           throw new Error(errorData.error || 'Échec du chargement de mes projets.');
         }
         const rawProjects = await myProjectsRes.json();
-        console.log('Projets bruts reçus pour apprenant:', rawProjects);
-
         // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
         const formattedStudentProjects = rawProjects.map(project => {
             const sanitizedProject = sanitizeProjectArrays(project);
             const assignment = sanitizedProject.assignments && sanitizedProject.assignments.length > 0 ? sanitizedProject.assignments[0] : null;
             
             if (assignment) {
-              return {
+              const formattedProject = {
                 ...sanitizedProject, // Détails du projet maître
                 projectId: sanitizedProject._id, // Stocker l'ID du projet maître séparément
                 ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
@@ -117,6 +115,7 @@ function ProjectsPage() {
                   evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
                 })),
               };
+              return formattedProject;
             } else {
               return sanitizedProject;
             }
