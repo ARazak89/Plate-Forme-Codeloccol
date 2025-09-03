@@ -143,6 +143,8 @@ export default function Dashboard() {
 
           setMyProjects(myAssignedProjects);
           setEvaluationsAsEvaluator(prev => [...prev, ...projectsToEvaluateAsApprenant]); // Ajouter aux évaluations existantes
+          console.log("Dashboard - My Assigned Projects (myProjects):", myAssignedProjects);
+          console.log("Dashboard - Projects To Evaluate (from my-projects):", projectsToEvaluateAsApprenant);
 
         } else {
           const errorData = await myProjectsRes.json();
@@ -158,6 +160,7 @@ export default function Dashboard() {
         // Nous allons remplacer complètement l'état evaluationsAsEvaluator avec les nouvelles données
         setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
+        console.log("Dashboard - Evaluations As Evaluator (from API):", evalAsEvaluatorData);
       } else {
         const errorData = await evalAsEvaluatorRes.json();
         throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
