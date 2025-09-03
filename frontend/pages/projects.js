@@ -670,7 +670,8 @@ function ProjectsPage() {
             )}
           </div>
 
-          <div className="col-12 mt-5 mb-4">
+          {/* La section "Corrections à Venir" a été déplacée vers le tableau de bord pour éviter la duplication. */}
+          {/* <div className="col-12 mt-5 mb-4">
             <h3>Corrections à Venir</h3>
             {projectsToEvaluate.length === 0 ? (
               <div className="alert alert-info text-center mt-3">
@@ -723,7 +724,7 @@ function ProjectsPage() {
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       )}
 
@@ -738,7 +739,7 @@ function ProjectsPage() {
               </div>
               <div className="modal-body">
                 {/* Bannière de félicitations pour les projets approuvés */}
-                {selectedProject.status === 'approved' && (
+                {selectedProject.status === 'approved' && selectedProject.type === 'my_project' && (
                   <div className="alert alert-success border-0 mb-4">
                     <div className="d-flex align-items-center">
                       <i className="bi bi-trophy-fill fs-1 me-3 text-warning"></i>
@@ -749,6 +750,19 @@ function ProjectsPage() {
                     </div>
                     </div>
                   )}
+
+                {/* Message spécifique pour les projets à évaluer */}
+                {selectedProject.type === 'to_evaluate' && (
+                  <div className="alert alert-warning border-0 mb-4">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-pencil-square fs-1 me-3 text-warning"></i>
+                      <div>
+                        <h5 className="mb-1">Projet à Évaluer</h5>
+                        <p className="mb-0">Ceci est un projet soumis par <strong>{selectedProject.student.name}</strong> en attente de votre évaluation.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="row">
                   <div className="col-md-8">
@@ -795,17 +809,20 @@ function ProjectsPage() {
                     )}
                     
                     {/* Statut avec icône */}
-                    <div className="card mb-3 shadow-sm">
-                      <div className="card-body d-flex align-items-center">
-                        <h6 className="mb-0 me-2 text-primary"><i className="bi bi-info-circle me-2"></i> Statut:</h6> 
-                        <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'}`}>
-                          <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
-                          {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
-                        </span>
+                    {selectedProject.type === 'my_project' && (
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body d-flex align-items-center">
+                          <h6 className="mb-0 me-2 text-primary"><i className="bi bi-info-circle me-2"></i> Statut:</h6> 
+                          <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'}`}>
+                            <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
+                            {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    {selectedProject.submissionDate && (
+                    )}
+
+                    {/* Date de Soumission */}
+                    {selectedProject.submissionDate && selectedProject.type === 'my_project' && (
                       <div className="card mb-3 shadow-sm">
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-calendar-event me-2"></i> Date de Soumission:</h6> 
@@ -816,6 +833,15 @@ function ProjectsPage() {
                             hour: '2-digit',
                             minute: '2-digit'
                           })}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedProject.repoUrl && selectedProject.type === 'to_evaluate' && (
+                      <div className="card mb-3 shadow-sm">
+                        <div className="card-body d-flex align-items-center">
+                          <h6 className="mb-0 me-2 text-primary"><i className="bi bi-github me-2"></i> Dépôt du projet soumis:</h6> 
+                          <a href={selectedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{selectedProject.repoUrl}</a>
                         </div>
                       </div>
                     )}
@@ -858,7 +884,7 @@ function ProjectsPage() {
                     <h6 className="text-primary mb-3">Liens</h6>
                     
                     {/* Dépôt GitHub avec bouton stylisé */}
-                    {selectedProject.repoUrl && (
+                    {selectedProject.repoUrl && selectedProject.type === 'my_project' && (
                       <div className="mb-3">
                         <a 
                           href={selectedProject.repoUrl} 

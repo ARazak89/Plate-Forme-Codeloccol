@@ -75,17 +75,23 @@ export async function listMyProjects(req, res) {
     })
     .populate('templateProject', 'title order');
 
-  // 2. Trouver les projets où l'utilisateur est un évaluateur désigné (et non l'étudiant de l'assignation)
-  const projectsToEvaluate = await Project.find({
-    "assignments.peerEvaluators": studentId,
-    "assignments.status": 'pending', // Seules les assignations en attente d'évaluation
-    "assignments.student": { $ne: studentId }, // S'assurer que ce n'est pas son propre projet
+  // 2. Trouver les projets où l'utilisateur est un évaluateur désigné via les évaluations en attente
+  const evaluationsToComplete = await Evaluation.find({
+    evaluator: studentId,
+    status: 'pending',
   })
     .populate({
-      path: 'assignments.student',
+      path: 'project',
+      select: 'title order objectives description specifications resourceLinks exerciseStatements demoVideoUrl',
+    })
+    .populate({
+      path: 'student',
       select: 'name',
     })
-    .populate('templateProject', 'title order');
+    .populate({
+      path: 'assignment',
+      select: 'status submissionDate repoUrl',
+    });
 
   // Traiter les projets assignés pour l'utilisateur
   const formattedMyProjects = myAssignedProjects.flatMap(project => {
@@ -100,21 +106,27 @@ export async function listMyProjects(req, res) {
       }));
   });
 
-  // Traiter les projets à évaluer par l'utilisateur
-  const formattedProjectsToEvaluate = projectsToEvaluate.flatMap(project => {
-    return project.assignments
-      .filter(assign => assign.peerEvaluators.includes(studentId) && !assign.student.equals(studentId) && assign.status === 'pending')
-      .map(assign => ({
-        ...project.toObject(),
-        ...assign.toObject(),
-        _id: assign._id,
-        projectId: project._id,
-        type: 'to_evaluate',
-        studentToEvaluate: assign.student, // L'étudiant dont le projet doit être évalué
-      }));
-  });
+  // Traiter les évaluations à compléter par l'utilisateur comme des "Corrections à Venir"
+  const formattedProjectsToEvaluate = evaluationsToComplete.map(evaluation => ({
+    _id: evaluation._id, // L'ID de l'évaluation devient l'ID principal
+    projectId: evaluation.project._id, // ID du projet maître
+    assignmentId: evaluation.assignment._id, // ID de l'assignation
+    title: evaluation.project.title, // Titre du projet
+    description: evaluation.project.description,
+    status: evaluation.status, // Statut de l'évaluation
+    type: 'to_evaluate',
+    studentToEvaluate: evaluation.student, // L'apprenant dont le projet doit être évalué
+    repoUrl: evaluation.assignment.repoUrl, // URL du dépôt de l'assignation à évaluer
+    submissionDate: evaluation.assignment.submissionDate, // Date de soumission de l'assignation à évaluer
+    objectives: evaluation.project.objectives,
+    specifications: evaluation.project.specifications,
+    exerciseStatements: evaluation.project.exerciseStatements,
+    resourceLinks: evaluation.project.resourceLinks,
+    demoVideoUrl: evaluation.project.demoVideoUrl,
+    order: evaluation.project.order,
+  })).sort((a, b) => (a.order || 0) - (b.order || 0)); // Trier par ordre du projet maître
 
-  // Combiner les deux listes
+  // Combiner les deux listes, en gardant à l'esprit que ces listes seront utilisées séparément dans le frontend (dashboard)
   res.json([...formattedMyProjects, ...formattedProjectsToEvaluate]);
 }
 
