@@ -142,7 +142,6 @@ export default function Dashboard() {
           const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMyProjects(myAssignedProjects);
-          console.log("Dashboard - My Projects (Learner View):", myAssignedProjects.map(p => ({ title: p.title, status: p.status })));
           setEvaluationsAsEvaluator(projectsToEvaluateAsApprenant); // Ajouter aux évaluations existantes
 
         } else {
@@ -723,7 +722,7 @@ export default function Dashboard() {
                         <div className="card-body">
                           <h5 className="card-title d-flex align-items-center mb-2">
                             <i className="bi bi-journal-text me-2 text-info"></i> Projet: {project.title}
-                            {project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En Attente Pairs</span>}
+                            {project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En attente d\'évaluation</span>}
                             {project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
                           </h5>
                           <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: 
@@ -764,20 +763,45 @@ export default function Dashboard() {
                           <h5 className="card-title d-flex align-items-center mb-1">
                             <i className="bi bi-folder-open me-2 text-success"></i> {project.title}
                             {console.log(`Projet ${project.title} - Statut au rendu: ${project.status}`)}
-                            <span className={`badge rounded-pill bg-${
-                              project.status === 'assigned' ? 'warning text-dark' :
-                              project.status === 'pending' || project.status === 'awaiting_staff_review' ? 'info' :
-                              'success'
-                            } ms-2`}>
-                              <i className={`bi bi-${
-                                project.status === 'assigned' ? 'clock' :
-                                project.status === 'pending' || project.status === 'awaiting_staff_review' ? 'hourglass-split' :
-                                'check-circle'
-                              } me-1`}></i>
-                              {project.status === 'assigned' ? 'Assigné' :
-                               project.status === 'pending' ? 'En cours d\'évaluation' :
-                               project.status === 'awaiting_staff_review' ? 'En attente Staff' :
-                               'Approuvé'}
+                            <span className={`badge rounded-pill bg-${(() => {
+                              if (project.repoUrl) {
+                                // Project has been submitted
+                                if (project.status === 'pending') return 'warning text-dark';
+                                if (project.status === 'awaiting_staff_review') return 'info';
+                                if (project.status === 'approved') return 'success';
+                                if (project.status === 'rejected') return 'danger';
+                              } else {
+                                // Project is assigned but not submitted
+                                return 'info';
+                              }
+                              return 'secondary'; // Fallback
+                            })()} ms-2`}>
+                              <i className={`bi bi-${(() => {
+                                if (project.repoUrl) {
+                                  // Project has been submitted
+                                  if (project.status === 'pending') return 'hourglass-split';
+                                  if (project.status === 'awaiting_staff_review') return 'person-workspace';
+                                  if (project.status === 'approved') return 'check-circle';
+                                  if (project.status === 'rejected') return 'x-circle';
+                                } else {
+                                  // Project is assigned but not submitted
+                                  return 'clock';
+                                }
+                                return 'question-circle'; // Fallback
+                              })()} me-1`}></i>
+                              {(() => {
+                                if (project.repoUrl) {
+                                  // Project has been submitted
+                                  if (project.status === 'pending') return 'En attente d\'évaluation';
+                                  if (project.status === 'awaiting_staff_review') return 'En attente Staff';
+                                  if (project.status === 'approved') return 'Approuvé';
+                                  if (project.status === 'rejected') return 'Rejeté';
+                                } else {
+                                  // Project is assigned but not submitted
+                                  return 'Assigné';
+                                }
+                                return 'Statut Inconnu'; // Fallback
+                              })()}
                             </span>
                             {project.order && (
                               <small className="text-muted ms-2">(Projet {project.order})</small>
