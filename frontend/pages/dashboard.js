@@ -148,6 +148,7 @@ export default function Dashboard() {
           setMyProjects(myAssignedProjects);
           setEvaluationsAsEvaluator(projectsToEvaluateAsApprenant); // Ajouter aux évaluations existantes
 
+          
         } else {
           const errorData = await myProjectsRes.json();
           throw new Error(errorData.error || 'Échec du chargement de mes projets.');
