@@ -15,7 +15,9 @@ const sanitizeProjectArrays = (project) => ({
 });
 
 function ProjectsPage() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState([]); // Garde pour les projets combinés si besoin, ou réaffecter
+  const [myProjects, setMyProjects] = useState([]); // NOUVEL ÉTAT pour les projets de l'apprenant
+  const [projectsToEvaluate, setProjectsToEvaluate] = useState([]); // NOUVEL ÉTAT pour les projets à évaluer
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showProjectModal, setShowProjectModal] = useState(false); // Nouvel état pour la modale
@@ -114,6 +116,7 @@ function ProjectsPage() {
                   ...evalItem,
                   evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
                 })),
+                type: project.type, // Conserver le type du projet
               };
               return formattedProject;
             } else {
@@ -121,10 +124,13 @@ function ProjectsPage() {
             }
         });
 
-        // Trier par ordre du projet maître
-        projectsToSet = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Filtrer les projets par type
+        const myAssigned = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const toEvaluate = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        setProjects(projectsToSet);
+        setMyProjects(myAssigned);
+        setProjectsToEvaluate(toEvaluate);
+        setProjects([]); // On n'utilise plus cet état directement pour l'affichage apprenant
       }
     } catch (e) {
       console.error("Error loading projects page data:", e);
@@ -132,7 +138,7 @@ function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [API, setMe, setProjects, setAllProjects, setError, setLoading]); // Ajouter toutes les dépendances ici
+  }, [API, setMe, setProjects, setAllProjects, setError, setLoading, setMyProjects, setProjectsToEvaluate]); // Ajouter toutes les dépendances ici
 
   useEffect(() => {
     const token = getAuthToken();
@@ -591,74 +597,134 @@ function ProjectsPage() {
         </div>
       ) : (
         // Vue pour Apprenant: Cartes de projets
-        projects.length === 0 ? (
-          <div className="alert alert-info text-center mt-4">
-            <i className="bi bi-info-circle me-2"></i> Aucun projet assigné ou approuvé pour le moment.
-          </div>
-        ) : (
-          <div className="row">
-            {projects.map(project => (
-              <div key={project._id} className="col-md-6 col-lg-4 mb-4">
-                <div 
-                  className="card h-100 shadow-hover-3d border-0"
-                  onClick={() => handleCardClick(project)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="card-body d-flex flex-column">
-                    <div>
-                      <h5 className="card-title text-primary mb-2">
-                        <i className="bi bi-folder-check me-2"></i> {project.title}
-                      </h5>
-                      {project.templateProject && project.templateProject.order && (
-                        <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
-                      )}
-                    </div>
-
-                    {/* Indicateur de statut avec icône */}
-                    <div className="mt-3 mb-3 d-flex align-items-center">
-                      <span className={`badge rounded-pill bg-${
-                        project.status === 'assigned' ? 'warning text-dark' :
-                        project.status === 'pending' ? 'info' :
-                        'success'
-                      } me-2`}>
-                        <i className={`bi bi-${
-                          project.status === 'assigned' ? 'clock' :
-                          project.status === 'pending' ? 'hourglass-split' :
-                          'check-circle'
-                        } me-1`}></i>
-                        {project.status === 'assigned' ? 'Assigné' :
-                         project.status === 'pending' ? 'En cours d\'évaluation' :
-                         'Approuvé'}
-                      </span>
-                      
-                      {/* Message spécial pour les projets approuvés */}
-                      {project.status === 'approved' && (
-                        <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
-                      )}
-                    </div>
-
-                    {/* Bouton de soumission pour les projets assignés */}
-                    {project.status === 'assigned' && (
-                      <div className="mt-auto">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenSubmitProjectModal(project);
-                          }}
-                          className="btn btn-primary w-100 btn-sm"
-                          title="Soumettre ce projet"
-                        >
-                          <i className="bi bi-upload me-2"></i>
-                          Soumettre le Projet
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div className="row">
+          <div className="col-12 mb-4">
+            <h3>Mes Projets</h3>
+            {myProjects.length === 0 ? (
+              <div className="alert alert-info text-center mt-3">
+                <i className="bi bi-info-circle me-2"></i> Aucun projet assigné ou approuvé pour le moment.
               </div>
-            ))}
+            ) : (
+              <div className="row">
+                {myProjects.map(project => (
+                  <div key={project._id} className="col-md-6 col-lg-4 mb-4">
+                    <div 
+                      className="card h-100 shadow-hover-3d border-0"
+                      onClick={() => handleCardClick(project)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="card-body d-flex flex-column">
+                        <div>
+                          <h5 className="card-title text-primary mb-2">
+                            <i className="bi bi-folder-check me-2"></i> {project.title}
+                          </h5>
+                          {project.templateProject && project.templateProject.order && (
+                            <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
+                          )}
+                        </div>
+
+                        {/* Indicateur de statut avec icône */}
+                        <div className="mt-3 mb-3 d-flex align-items-center">
+                          <span className={`badge rounded-pill bg-${
+                            project.status === 'assigned' ? 'warning text-dark' :
+                            project.status === 'pending' ? 'info' :
+                            'success'
+                          } me-2`}>
+                            <i className={`bi bi-${
+                              project.status === 'assigned' ? 'clock' :
+                              project.status === 'pending' ? 'hourglass-split' :
+                              'check-circle'
+                            } me-1`}></i>
+                            {project.status === 'assigned' ? 'Assigné' :
+                             project.status === 'pending' ? 'En cours d\'évaluation' :
+                             'Approuvé'}
+                          </span>
+                          
+                          {/* Message spécial pour les projets approuvés */}
+                          {project.status === 'approved' && (
+                            <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
+                          )}
+                        </div>
+
+                        {/* Bouton de soumission pour les projets assignés */}
+                        {project.status === 'assigned' && (
+                          <div className="mt-auto">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenSubmitProjectModal(project);
+                              }}
+                              className="btn btn-primary w-100 btn-sm"
+                              title="Soumettre ce projet"
+                            >
+                              <i className="bi bi-upload me-2"></i>
+                              Soumettre le Projet
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )
+
+          <div className="col-12 mt-5 mb-4">
+            <h3>Corrections à Venir</h3>
+            {projectsToEvaluate.length === 0 ? (
+              <div className="alert alert-info text-center mt-3">
+                <i className="bi bi-info-circle me-2"></i> Aucune correction de projet à évaluer pour le moment.
+              </div>
+            ) : (
+              <div className="row">
+                {projectsToEvaluate.map(project => (
+                  <div key={project._id} className="col-md-6 col-lg-4 mb-4">
+                    <div 
+                      className="card h-100 shadow-hover-3d border-0 bg-light"
+                      onClick={() => handleCardClick(project)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="card-body d-flex flex-column">
+                        <div>
+                          <h5 className="card-title text-warning mb-2">
+                            <i className="bi bi-pencil-square me-2"></i> Correction pour: {project.title}
+                          </h5>
+                          {project.templateProject && project.templateProject.order && (
+                            <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
+                          )}
+                          <p className="card-text text-muted">Soumis par: <strong>{project.studentToEvaluate ? project.studentToEvaluate.name : 'Apprenant Inconnu'}</strong></p>
+                        </div>
+
+                        {/* Indicateur de statut avec icône */}
+                        <div className="mt-3 mb-3 d-flex align-items-center">
+                          <span className="badge rounded-pill bg-danger me-2">
+                            <i className="bi bi-hourglass-split me-1"></i> En Attente de votre Évaluation
+                          </span>
+                        </div>
+
+                        <div className="mt-auto">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: Implémenter la fonction pour évaluer ce projet
+                              alert(`Évaluer le projet de ${project.studentToEvaluate ? project.studentToEvaluate.name : 'Apprenant Inconnu'}`);
+                            }}
+                            className="btn btn-warning w-100 btn-sm"
+                            title="Évaluer ce projet"
+                          >
+                            <i className="bi bi-check-circle me-2"></i>
+                            Commencer l'Évaluation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Modale d'affichage des détails du projet (pour apprenant) */}
