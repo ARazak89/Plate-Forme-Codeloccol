@@ -9,7 +9,6 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
-    "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.11.3",
     "next": "14.2.5",
     "react": "18.2.0",
