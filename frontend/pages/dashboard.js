@@ -157,17 +157,17 @@ export default function Dashboard() {
 
       // Fetch pending evaluations as an evaluator (for all roles that can evaluate)
       // Cette section devrait maintenant compléter les évaluations à faire pour les apprenants si elles viennent d'autres sources que my-projects
-      const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
-      if (evalAsEvaluatorRes.ok) {
-        const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
+        const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
+        if (evalAsEvaluatorRes.ok) {
+          const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
         console.log("Evaluations As Evaluator Data (from /api/evaluations/pending-as-evaluator):", evalAsEvaluatorData);
         // Nous allons remplacer complètement l'état evaluationsAsEvaluator avec les nouvelles données
-        setEvaluationsAsEvaluator(evalAsEvaluatorData);
+          setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
-      } else {
-        const errorData = await evalAsEvaluatorRes.json();
-        throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
-      }
+        } else {
+          const errorData = await evalAsEvaluatorRes.json();
+          throw new Error(errorData.error || 'Échec du chargement des évaluations à réaliser.');
+        }
 
       // Fetch all pending evaluations for staff/admin
       if (userData.role === 'staff' || userData.role === 'admin') {

@@ -447,7 +447,7 @@ async function _createEvaluationsAndNotifications(
   const evaluatorNames = slots.map((slot) => slot.evaluator.name).join(' et ');
 
   for (const slot of slots) {
-    await Evaluation.create({
+    const evaluation = await Evaluation.create({
       project: projectId,
       assignment: assignmentId, // Ajouter l'ID de l'assignation ici
       student: studentId,
@@ -456,6 +456,13 @@ async function _createEvaluationsAndNotifications(
       status: 'pending',
       feedback: {},
     });
+
+    // Mettre à jour l'utilisateur évaluateur pour ajouter cette évaluation à sa liste
+    await User.findByIdAndUpdate(
+      slot.evaluator._id,
+      { $push: { evaluations: evaluation._id } },
+      { new: true, useFindAndModify: false }
+    );
 
     console.log(
       `Created evaluation for evaluator ${slot.evaluator._id} and project ${projectId}`,

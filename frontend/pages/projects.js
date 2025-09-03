@@ -54,29 +54,29 @@ function ProjectsPage() {
   const router = useRouter();
 
   const loadData = useCallback(async (token) => {
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        setLoading(true);
+    setError(null);
 
-      // Charger les informations de l'utilisateur
-      const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!userRes.ok) {
-        const errorData = await userRes.json();
-        throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
-      }
-      const userData = await userRes.json();
-      setMe(userData);
-
-      // Chargement conditionnel des projets
-      let projectsToSet = [];
-      if (userData.role === 'staff' || userData.role === 'admin') {
-        // Pour staff/admin: charger tous les projets templates avec leurs assignations peuplées
-        const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!allProjectsRes.ok) {
-          const errorData = await allProjectsRes.json();
-          throw new Error(errorData.error || 'Échec du chargement de tous les projets maîtres.');
+        // Charger les informations de l'utilisateur
+        const userRes = await fetch(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!userRes.ok) {
+          const errorData = await userRes.json();
+          throw new Error(errorData.error || 'Échec du chargement des données utilisateur.');
         }
-        const rawProjects = await allProjectsRes.json();
+        const userData = await userRes.json();
+        setMe(userData);
+
+        // Chargement conditionnel des projets
+        let projectsToSet = [];
+        if (userData.role === 'staff' || userData.role === 'admin') {
+        // Pour staff/admin: charger tous les projets templates avec leurs assignations peuplées
+          const allProjectsRes = await fetch(`${API}/api/projects/all`, { headers: { Authorization: `Bearer ${token}` } });
+          if (!allProjectsRes.ok) {
+            const errorData = await allProjectsRes.json();
+          throw new Error(errorData.error || 'Échec du chargement de tous les projets maîtres.');
+          }
+          const rawProjects = await allProjectsRes.json();
         // Assainir les projets maîtres et leurs assignations
         const sanitizedProjects = rawProjects.map(project => ({
           ...sanitizeProjectArrays(project),
@@ -91,14 +91,14 @@ function ProjectsPage() {
         }));
         setAllProjects(sanitizedProjects);
         setProjects([]); // Les apprenants n'ont pas de projets "template" directement ici
-      } else {
+        } else {
         // Pour apprenant: charger leurs projets maîtres avec leurs assignations
-        const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!myProjectsRes.ok) {
-          const errorData = await myProjectsRes.json();
-          throw new Error(errorData.error || 'Échec du chargement de mes projets.');
-        }
-        const rawProjects = await myProjectsRes.json();
+          const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
+          if (!myProjectsRes.ok) {
+            const errorData = await myProjectsRes.json();
+            throw new Error(errorData.error || 'Échec du chargement de mes projets.');
+          }
+          const rawProjects = await myProjectsRes.json();
         // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
         const formattedStudentProjects = rawProjects.map(project => {
             const sanitizedProject = sanitizeProjectArrays(project);
@@ -133,11 +133,11 @@ function ProjectsPage() {
         setProjects([]); // On n'utilise plus cet état directement pour l'affichage apprenant
       }
     } catch (e) {
-      console.error("Error loading projects page data:", e);
-      setError('Error loading data: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
+        console.error("Error loading projects page data:", e);
+        setError('Error loading data: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
   }, [API, setMe, setProjects, setAllProjects, setError, setLoading, setMyProjects, setProjectsToEvaluate]); // Ajouter toutes les dépendances ici
 
   useEffect(() => {
@@ -284,11 +284,11 @@ function ProjectsPage() {
       }
 
       const body = {
-        title: projectTitle,
-        description: projectDescription,
-        demoVideoUrl: projectDemoVideoUrl,
-        specifications: projectSpecifications,
-        size: projectSize,
+          title: projectTitle, 
+          description: projectDescription, 
+          demoVideoUrl: projectDemoVideoUrl, 
+          specifications: projectSpecifications, 
+          size: projectSize, 
         order: projectOrder,
         objectives: projectObjectives,
         exerciseStatements: projectExerciseStatements,
@@ -338,7 +338,7 @@ function ProjectsPage() {
 
   const handleDeleteProject = (projectToDelete) => {
     setCurrentProjectToDelete(projectToDelete);
-    setShowDeleteProjectModal(true);
+      setShowDeleteProjectModal(true);
   };
 
   const handleDeleteProjectConfirmed = async () => {
@@ -370,8 +370,8 @@ function ProjectsPage() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
-      });
-      const data = await res.json();
+        });
+        const data = await res.json();
       if (res.ok) {
         alert('Suppression effectuée avec succès !');
         setShowDeleteProjectModal(false);
@@ -602,71 +602,71 @@ function ProjectsPage() {
             <h3>Mes Projets</h3>
             {myProjects.length === 0 ? (
               <div className="alert alert-info text-center mt-3">
-                <i className="bi bi-info-circle me-2"></i> Aucun projet assigné ou approuvé pour le moment.
-              </div>
-            ) : (
-              <div className="row">
+            <i className="bi bi-info-circle me-2"></i> Aucun projet assigné ou approuvé pour le moment.
+          </div>
+        ) : (
+          <div className="row">
                 {myProjects.map(project => (
-                  <div key={project._id} className="col-md-6 col-lg-4 mb-4">
-                    <div 
-                      className="card h-100 shadow-hover-3d border-0"
-                      onClick={() => handleCardClick(project)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="card-body d-flex flex-column">
-                        <div>
-                          <h5 className="card-title text-primary mb-2">
-                            <i className="bi bi-folder-check me-2"></i> {project.title}
-                          </h5>
+              <div key={project._id} className="col-md-6 col-lg-4 mb-4">
+                <div 
+                  className="card h-100 shadow-hover-3d border-0"
+                  onClick={() => handleCardClick(project)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="card-body d-flex flex-column">
+                  <div>
+                      <h5 className="card-title text-primary mb-2">
+                        <i className="bi bi-folder-check me-2"></i> {project.title}
+                      </h5>
                           {project.templateProject && project.templateProject.order && (
                             <p className="card-text text-muted"><small>(Projet {project.templateProject.order})</small></p>
                           )}
-                        </div>
-
-                        {/* Indicateur de statut avec icône */}
-                        <div className="mt-3 mb-3 d-flex align-items-center">
-                          <span className={`badge rounded-pill bg-${
-                            project.status === 'assigned' ? 'warning text-dark' :
-                            project.status === 'pending' ? 'info' :
-                            'success'
-                          } me-2`}>
-                            <i className={`bi bi-${
-                              project.status === 'assigned' ? 'clock' :
-                              project.status === 'pending' ? 'hourglass-split' :
-                              'check-circle'
-                            } me-1`}></i>
-                            {project.status === 'assigned' ? 'Assigné' :
-                             project.status === 'pending' ? 'En cours d\'évaluation' :
-                             'Approuvé'}
-                          </span>
-                          
-                          {/* Message spécial pour les projets approuvés */}
-                          {project.status === 'approved' && (
-                            <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
-                          )}
-                        </div>
-
-                        {/* Bouton de soumission pour les projets assignés */}
-                        {project.status === 'assigned' && (
-                          <div className="mt-auto">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenSubmitProjectModal(project);
-                              }}
-                              className="btn btn-primary w-100 btn-sm"
-                              title="Soumettre ce projet"
-                            >
-                              <i className="bi bi-upload me-2"></i>
-                              Soumettre le Projet
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </div>
+
+                    {/* Indicateur de statut avec icône */}
+                      <div className="mt-3 mb-3 d-flex align-items-center">
+                      <span className={`badge rounded-pill bg-${
+                        project.status === 'assigned' ? 'warning text-dark' : 
+                        project.status === 'pending' ? 'info' : 
+                        'success'
+                      } me-2`}>
+                        <i className={`bi bi-${
+                          project.status === 'assigned' ? 'clock' : 
+                          project.status === 'pending' ? 'hourglass-split' : 
+                          'check-circle'
+                        } me-1`}></i>
+                        {project.status === 'assigned' ? 'Assigné' : 
+                         project.status === 'pending' ? 'En cours d\'évaluation' : 
+                         'Approuvé'}
+                    </span>
+                      
+                      {/* Message spécial pour les projets approuvés */}
+                      {project.status === 'approved' && (
+                          <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
+                      )}
+                </div>
+
+                    {/* Bouton de soumission pour les projets assignés */}
+                    {project.status === 'assigned' && (
+                      <div className="mt-auto">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenSubmitProjectModal(project);
+                          }}
+                          className="btn btn-primary w-100 btn-sm"
+                          title="Soumettre ce projet"
+                        >
+                          <i className="bi bi-upload me-2"></i>
+                          Soumettre le Projet
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
+            ))}
+          </div>
             )}
           </div>
 
@@ -705,10 +705,10 @@ function ProjectsPage() {
                       <div>
                         <h5 className="mb-1">Projet à Évaluer</h5>
                         <p className="mb-0">Ceci est un projet soumis par <strong>{selectedProject.student.name}</strong> en attente de votre évaluation.</p>
-                      </div>
+                          </div>
                     </div>
-                  </div>
-                )}
+                    </div>
+                  )}
 
                 <div className="row">
                   <div className="col-md-8">
@@ -721,7 +721,7 @@ function ProjectsPage() {
                         <p className="card-text">{selectedProject.description}</p>
                       </div>
                     </div>
-
+                    
                     {/* Objectives */}
                     {selectedProject.objectives && (selectedProject.objectives || []).length > 0 && (
                       <div className="card mb-3 shadow-sm">
@@ -729,11 +729,11 @@ function ProjectsPage() {
                           <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-bullseye me-2"></i> Objectifs</h6>
                           <ul className="list-group list-group-flush">
                             {(selectedProject.objectives || []).map((objective, index) => (
-                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                                <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
-                              </li>
-                            ))}
-                          </ul>
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {objective}
+                            </li>
+                          ))}
+                        </ul>
                         </div>
                       </div>
                     )}
@@ -760,10 +760,10 @@ function ProjectsPage() {
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-info-circle me-2"></i> Statut:</h6> 
                           <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'}`}>
-                            <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
-                            {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
-                          </span>
-                        </div>
+                        <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
+                        {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
+                      </span>
+                    </div>
                       </div>
                     )}
 
@@ -773,11 +773,11 @@ function ProjectsPage() {
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-calendar-event me-2"></i> Date de Soumission:</h6> 
                           <span className="text-muted">{new Date(selectedProject.submissionDate).toLocaleDateString('fr-FR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
                           })}</span>
                         </div>
                       </div>
@@ -799,12 +799,12 @@ function ProjectsPage() {
                           <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-link-45deg me-2"></i> Ressources Supplémentaires</h6>
                           <ul className="list-group list-group-flush">
                             {(selectedProject.resourceLinks || []).map((link, index) => (
-                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                                <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
-                                <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
-                              </li>
-                            ))}
-                          </ul>
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-box-arrow-up-right text-info me-2 mt-1"></i>
+                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none">{link}</a>
+                            </li>
+                          ))}
+                        </ul>
                         </div>
                       </div>
                     )}
@@ -815,11 +815,11 @@ function ProjectsPage() {
                           <h6 className="card-title d-flex align-items-center text-primary"><i className="bi bi-list-task me-2"></i> Énoncés d'Exercice</h6>
                           <ul className="list-group list-group-flush">
                             {(selectedProject.exerciseStatements || []).map((statement, index) => (
-                              <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
-                                <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
-                              </li>
-                            ))}
-                          </ul>
+                            <li key={index} className="list-group-item d-flex align-items-start border-0 py-1 px-0">
+                              <i className="bi bi-check-lg text-success me-2 mt-1"></i> {statement}
+                            </li>
+                          ))}
+                        </ul>
                         </div>
                       </div>
                     )}
@@ -918,7 +918,7 @@ function ProjectsPage() {
                       <div key={index} className="input-group mb-2">
                         <input
                           type="text"
-                          className="form-control"
+                      className="form-control"
                           value={objective}
                           onChange={(e) => {
                             const newObjectives = [...projectObjectives];
@@ -967,8 +967,8 @@ function ProjectsPage() {
                     <label htmlFor="projectSpecifications" className="form-label d-block">Spécifications (Optionnel)</label>
                     {projectSpecifications.map((spec, index) => (
                       <div key={index} className="input-group mb-2">
-                        <textarea
-                          className="form-control"
+                    <textarea
+                      className="form-control"
                           rows="2"
                           value={spec}
                           onChange={(e) => {
@@ -977,7 +977,7 @@ function ProjectsPage() {
                             setProjectSpecifications(newSpecs);
                           }}
                           placeholder="Entrez une spécification"
-                        ></textarea>
+                    ></textarea>
                         <button
                           className="btn btn-outline-danger"
                           type="button"
@@ -1006,7 +1006,7 @@ function ProjectsPage() {
                       <div key={index} className="input-group mb-2">
                         <input
                           type="url"
-                          className="form-control"
+                      className="form-control"
                           value={link}
                           onChange={(e) => {
                             const newLinks = [...projectResourceLinks];
@@ -1051,13 +1051,13 @@ function ProjectsPage() {
                   </div>
 
                   {/* Champ pour les énoncés d'exercice */}
-                  <div className="mb-3">
+                    <div className="mb-3">
                     <label htmlFor="projectExerciseStatements" className="form-label d-block">Énoncés d'Exercice</label>
                     {projectExerciseStatements.map((statement, index) => (
                       <div key={index} className="input-group mb-2">
                         <input
                           type="text"
-                          className="form-control"
+                        className="form-control"
                           value={statement}
                           onChange={(e) => {
                             const newStatements = [...projectExerciseStatements];
@@ -1085,8 +1085,8 @@ function ProjectsPage() {
                     >
                       <i className="bi bi-plus-circle me-2"></i> Ajouter un énoncé d'exercice
                     </button>
-                    <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
-                  </div>
+                      <div className="form-text text-muted">Ajoutez les étapes ou les consignes de l'exercice, une par ligne.</div>
+                    </div>
 
                   {/* Ordre du Projet (Numéro) */}
                   <div className="mb-3">
