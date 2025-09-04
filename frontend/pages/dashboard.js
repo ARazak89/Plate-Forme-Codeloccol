@@ -894,9 +894,23 @@ export default function Dashboard() {
                   {me.role === 'apprenant' ? (
                     // Affichage pour l'apprenant
                     upcomingEvaluations.map((evaluation) => {
-                      const evaluationStartTime = new Date(evaluation.slot.startTime);
-                      const evaluationEndTime = new Date(evaluation.slot.endTime);
-                    const now = new Date();
+                      // Vérifier si evaluation.slot existe avant d'accéder à ses propriétés
+                      const evaluationStartTime = evaluation.slot ? new Date(evaluation.slot.startTime) : null;
+                      const evaluationEndTime = evaluation.slot ? new Date(evaluation.slot.endTime) : null;
+                      const now = new Date();
+
+                      // Gérer le cas où slot est null
+                      if (!evaluationStartTime || !evaluationEndTime) {
+                        return (
+                          <li key={evaluation._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
+                            <div>
+                              <h5 className="mb-1 text-info"><i className="bi bi-calendar-check me-2"></i> Projet: {evaluation.project.title}</h5>
+                              <small className="text-muted d-flex align-items-center mt-1"><i className="bi bi-person me-1"></i> Apprenant: {evaluation.student?.name || 'N/A'}</small>
+                              <small className="text-danger d-flex align-items-center mt-1"><i className="bi bi-exclamation-triangle me-1"></i> Erreur: Créneau horaire manquant</small>
+                            </div>
+                          </li>
+                        );
+                      }
 
                       const gracePeriodEnd = new Date(evaluationEndTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
 
@@ -927,14 +941,22 @@ export default function Dashboard() {
                   ) : (
                     // Affichage pour le staff/admin
                     allPendingEvaluationsForStaff.filter(evaluation => {
-                      const evaluationEndTime = new Date(evaluation.slot.endTime);
+                      // Vérifier si evaluation.slot existe avant d'accéder à ses propriétés
+                      const evaluationEndTime = evaluation.slot ? new Date(evaluation.slot.endTime) : null;
+                      // Filtrer seulement si le slot et l'heure de fin sont valides
+                      if (!evaluationEndTime) return false;
+
                       const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000); // Ajoute 2 heures en millisecondes
                       const currentTime = new Date();
                       return currentTime < twoHoursAfterEndTime;
                     }).length > 0 ? (
                       // Regrouper les évaluations par projet
                       Object.values(allPendingEvaluationsForStaff.filter(evaluation => {
-                        const evaluationEndTime = new Date(evaluation.slot.endTime);
+                        // Vérifier si evaluation.slot existe avant d'accéder à ses propriétés
+                        const evaluationEndTime = evaluation.slot ? new Date(evaluation.slot.endTime) : null;
+                        // Filtrer seulement si le slot et l'heure de fin sont valides
+                        if (!evaluationEndTime) return false;
+
                         const twoHoursAfterEndTime = new Date(evaluationEndTime.getTime() + 2 * 60 * 60 * 1000);
                         const currentTime = new Date();
                         return currentTime < twoHoursAfterEndTime;
@@ -959,7 +981,23 @@ export default function Dashboard() {
                             <strong>Évaluations des pairs :</strong>
                             <ul className="list-group mt-2">
                               {projectGroup.evaluations.map(evalItem => {
-                                const evaluationTime = new Date(evalItem.slot.endTime); // Heure de fin du slot
+                                // Vérifier si evalItem.slot existe avant d'accéder à ses propriétés
+                                const evaluationTime = evalItem.slot ? new Date(evalItem.slot.endTime) : null; // Heure de fin du slot
+                                
+                                // Gérer le cas où evaluationTime est null
+                                if (!evaluationTime) {
+                                  return (
+                                    <li key={evalItem._id} className="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                      <span className="d-flex align-items-center">
+                                        <i className="bi bi-person-check me-2"></i> Évaluateur: <strong>{evalItem.evaluator.name}</strong> ({evalItem.evaluator.email})
+                                      </span>
+                                      <div>
+                                        <span className="badge bg-danger me-2 rounded-pill">Créneau manquant</span>
+                                      </div>
+                                    </li>
+                                  );
+                                }
+
                                 const submissionTime = evalItem.submissionDate ? new Date(evalItem.submissionDate) : null;
                                 const gracePeriodEnd = new Date(evaluationTime.getTime() + 60 * 60 * 1000); // 1 heure après l'heure de fin
                                 
