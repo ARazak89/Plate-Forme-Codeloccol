@@ -50,6 +50,8 @@ function ProjectsPage() {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState([]);
   const [success, setSuccess] = useState(null);
+  const [showErrorPopup, setShowErrorPopup] = useState(false); // Nouvel état pour le popup d'erreur
+  const [errorPopupMessage, setErrorPopupMessage] = useState(''); // Message pour le popup d'erreur
   
   const router = useRouter();
 
@@ -393,13 +395,22 @@ function ProjectsPage() {
         const slotsData = await slotsRes.json();
         setAvailableSlots(slotsData);
       } else {
-        setError('Impossible de charger les créneaux disponibles.');
+        // Ici, nous affichons l'erreur dans le popup au lieu de setError(null)
+        const errorData = await slotsRes.json();
+        setErrorPopupMessage(errorData.error || 'Impossible de charger les créneaux disponibles.');
+        setShowErrorPopup(true);
       }
     } catch (e) {
-      setError('Erreur lors du chargement des créneaux.');
+      setErrorPopupMessage('Erreur lors du chargement des créneaux.');
+      setShowErrorPopup(true);
     }
     
     setShowSubmitProjectModal(true);
+  };
+
+  const handleCloseErrorPopup = () => {
+    setShowErrorPopup(false);
+    setErrorPopupMessage('');
   };
 
   const handleSubmitProject = async (e) => {
@@ -407,6 +418,8 @@ function ProjectsPage() {
     setError(null);
     setSuccess(null);
     setLoading(true);
+    setShowErrorPopup(false); // Réinitialiser le popup d'erreur au début de la soumission
+    setErrorPopupMessage('');
 
     if (!currentProjectToSubmit || selectedSlotIds.length !== 2 || (!isRepoUrlOptional && !projectSubmissionRepoUrl)) {
       let errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
@@ -416,14 +429,16 @@ function ProjectsPage() {
       if (isRepoUrlOptional && selectedSlotIds.length !== 2) {
         errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
       }
-      setError(errorMessage);
+      setErrorPopupMessage(errorMessage); // Utiliser le nouvel état
+      setShowErrorPopup(true); // Afficher le popup
       setLoading(false);
       return;
     }
 
     // Vérifier que les créneaux sélectionnés sont uniques
     if (new Set(selectedSlotIds).size !== selectedSlotIds.length) {
-      setError('Veuillez sélectionner des créneaux distincts.');
+      setErrorPopupMessage('Veuillez sélectionner des créneaux distincts.');
+      setShowErrorPopup(true);
       setLoading(false);
       return;
     }
@@ -434,7 +449,8 @@ function ProjectsPage() {
     const uniqueEvaluators = [...new Set(evaluatorIds)];
     
     if (uniqueEvaluators.length !== 2) {
-      setError('Vous devez sélectionner exactement 2 créneaux, chacun d\'un évaluateur différent.');
+      setErrorPopupMessage('Vous devez sélectionner exactement 2 créneaux, chacun d\'un évaluateur différent.');
+      setShowErrorPopup(true);
       setLoading(false);
       return;
     }
@@ -1290,6 +1306,27 @@ function ProjectsPage() {
         </div>
       )}
       {me && me.role === 'apprenant' && showSubmitProjectModal && <div className="modal-backdrop fade show"></div>}
+
+      {/* Modale d'erreur personnalisée */}
+      {showErrorPopup && (
+        <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
+          <div className="modal-dialog modal-sm">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title"><i className="bi bi-exclamation-triangle me-2"></i> Erreur</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={handleCloseErrorPopup}></button>
+              </div>
+              <div className="modal-body">
+                <p>{errorPopupMessage}</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-danger" onClick={handleCloseErrorPopup}>Fermer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showErrorPopup && <div className="modal-backdrop fade show"></div>}
 
     </div>
   );
