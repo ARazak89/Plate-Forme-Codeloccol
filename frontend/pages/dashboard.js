@@ -8,6 +8,15 @@ import React from 'react'; // Added for React.Fragment
 import { getAuthToken } from '../utils/auth';
 import UserSummaryCard from '../components/UserSummaryCard'; // Importation du nouveau composant
 
+// Fonction utilitaire pour s'assurer que les propriétés sont des tableaux
+const sanitizeProjectArrays = (project) => ({
+  ...project,
+  objectives: project.objectives || [],
+  specifications: project.specifications || [],
+  exerciseStatements: project.exerciseStatements || [],
+  resourceLinks: project.resourceLinks || [],
+});
+
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export default function Dashboard() {
