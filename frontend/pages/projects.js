@@ -128,6 +128,26 @@ function ProjectsPage() {
     }
   }, [API, setMe, setProjects, setAllProjects, setError, setLoading, setMyProjects, setProjectsToEvaluate]); // Ajouter toutes les dépendances ici
 
+  const handleShowAddProjectModal = useCallback(() => {
+    // Calculer le plus grand numéro d'ordre existant parmi les templates de projet
+    const maxOrder = allProjects.reduce((max, projectGroup) => {
+      return Math.max(max, projectGroup.order || 0);
+    }, 0);
+    setProjectOrder(maxOrder + 1);
+    setShowAddProjectModal(true);
+    // Réinitialiser les autres champs du formulaire pour un nouveau projet
+    setProjectTitle('');
+    setProjectDescription('');
+    setProjectRepoUrl('');
+    setProjectDemoVideoUrl('');
+    setProjectSpecifications([]);
+    setProjectSize('short');
+    setProjectExerciseStatements([]);
+    setProjectResourceLinks([]);
+    setProjectObjectives([]);
+    setError(null);
+  }, [allProjects, setProjectOrder, setShowAddProjectModal, setProjectTitle, setProjectDescription, setProjectRepoUrl, setProjectDemoVideoUrl, setProjectSpecifications, setProjectSize, setProjectExerciseStatements, setProjectResourceLinks, setProjectObjectives, setError]);
+
   useEffect(() => {
     const token = getAuthToken();
     if (!token) {
@@ -229,26 +249,6 @@ function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleShowAddProjectModal = () => {
-    // Calculer le plus grand numéro d'ordre existant parmi les templates de projet
-    const maxOrder = allProjects.reduce((max, projectGroup) => {
-      return Math.max(max, projectGroup.order || 0);
-    }, 0);
-    setProjectOrder(maxOrder + 1);
-    setShowAddProjectModal(true);
-    // Réinitialiser les autres champs du formulaire pour un nouveau projet
-    setProjectTitle('');
-    setProjectDescription('');
-    setProjectRepoUrl('');
-    setProjectDemoVideoUrl('');
-    setProjectSpecifications([]);
-    setProjectSize('short');
-    setProjectExerciseStatements([]);
-    setProjectResourceLinks([]);
-    setProjectObjectives([]);
-    setError(null);
   };
 
   const handleEditProject = (project) => {
