@@ -260,19 +260,19 @@ export async function submitProjectSolution(req, res) {
   }
 }
 
-export async function approveProject(req, res) {
+export async function finalReviewProject(req, res) { // Renommé de approveProject
   try {
     const { id: projectId } = req.params; // ID du projet maître
-    const { assignmentId } = req.body; // ID de l'assignation à approuver
+    const { assignmentId, status } = req.body; // ID de l'assignation et le nouveau statut
 
-    if (!assignmentId) {
-      return res.status(400).json({ error: 'ID d\'assignation manquant.' });
+    if (!assignmentId || !status) {
+      return res.status(400).json({ error: 'ID d\'assignation ou statut manquant.' });
     }
 
     // Vérifier que l'utilisateur est un membre du personnel/admin
     if (req.user.role !== 'staff' && req.user.role !== 'admin') {
       return res.status(403).json({
-        error: 'Non autorisé à approuver des projets.',
+        error: 'Non autorisé à évaluer des projets.',
       });
     }
 
@@ -284,31 +284,104 @@ export async function approveProject(req, res) {
       return res.status(404).json({ error: 'Assignation non trouvée dans ce projet.' });
     }
 
-    if (assignment.status === 'approved') return res.json(project); // Déjà approuvé
-
-    assignment.status = 'approved';
-    // assignment.staffValidator = req.user._id; // Décommenter si vous voulez enregistrer le validateur staff
-    await project.save(); // Sauvegarder le projet maître pour mettre à jour l'assignation
-
-    const student = await User.findById(assignment.student);
-    if (student) {
-      student.daysRemaining += DAY_BONUS[project.size] || 1; // Utiliser la taille du projet maître
-      student.level = Math.max(student.level, 1) + 1; // Incrémenter le niveau de l'apprenant
-      // student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1; // Décommenter si vous suivez ce compteur
-
-      // TODO: Logique pour attribuer des badges (si Badge modèle est décommenté)
-
-      // Assignation du prochain projet en fonction du nouveau niveau de l'étudiant
-      await _assignProjectByLevel(student._id, student.level);
-
-      await student.save();
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Statut d\'évaluation invalide.' });
     }
 
-    // TODO: Notifier l'étudiant du résultat de l'évaluation finale (si Notification modèle est décommenté)
+    let message = '';
+    let notificationMessage = '';
 
-    res.json({ message: 'Projet approuvé avec succès et projet suivant assigné.', project });
+    if (status === 'approved') {
+      if (assignment.status === 'approved') {
+        return res.json({ message: 'Projet déjà approuvé.', project });
+      }
+      assignment.status = 'approved';
+      // assignment.staffValidator = req.user._id; // Décommenter si vous voulez enregistrer le validateur staff
+      message = 'Projet approuvé avec succès et projet suivant assigné.';
+      notificationMessage = `Votre projet \'${project.title}\' a été approuvé par le personnel. Félicitations ! Un nouveau projet vous a été assigné.`;
+
+      const student = await User.findById(assignment.student);
+      if (student) {
+        student.daysRemaining += DAY_BONUS[project.size] || 1; // Utiliser la taille du projet maître
+        student.level = Math.max(student.level, 1) + 1; // Incrémenter le niveau de l'apprenant
+        // student.totalProjectsCompleted = (student.totalProjectsCompleted || 0) + 1; // Décommenter si vous suivez ce compteur
+
+        // TODO: Logique pour attribuer des badges (si Badge modèle est décommenté)
+
+        // Assignation du prochain projet en fonction du nouveau niveau de l'étudiant
+        await _assignProjectByLevel(student._id, student.level);
+
+        await student.save();
+      }
+    } else if (status === 'rejected') {
+      if (assignment.status === 'rejected') {
+        return res.json({ message: 'Projet déjà rejeté.', project });
+      }
+      assignment.status = 'assigned'; // Rejeter le projet et le remettre à 'assigned' pour resoumission
+      assignment.repoUrl = undefined; // Effacer l'URL du dépôt
+      assignment.submissionDate = undefined; // Effacer la date de soumission
+      // TODO: Optionnel: effacer les évaluations existantes liées à cette assignation pour forcer de nouvelles évaluations
+      // Notification à l'apprenant
+      message = 'Projet rejeté avec succès et remis en statut assigné pour resoumission.';
+      notificationMessage = `Votre projet \'${project.title}\' a été rejeté par le personnel. Veuillez revoir votre projet et le soumettre à nouveau.`;
+    }
+
+    await project.save(); // Sauvegarder le projet maître pour persister les changements de l'assignation
+
+    // Notifier l'étudiant du résultat de l'évaluation finale
+    const student = await User.findById(assignment.student); // Récupérer l'étudiant pour la notification
+    if (student) {
+      await Notification.create({
+        user: student._id,
+        type: "project_status_update",
+        message: notificationMessage,
+      });
+    }
+
+    res.json({ message: message, project });
   } catch (e) {
-    console.error('Error approving project:', e);
+    console.error('Error during final staff review:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function getProjectsAwaitingStaffReview(req, res) {
+  try {
+    // Vérifier que l'utilisateur est un membre du personnel/admin
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Non autorisé à consulter cette ressource.',
+      });
+    }
+
+    // Trouver les projets où au moins une assignation est en attente de révision du personnel
+    const projects = await Project.find({
+      "assignments.status": "awaiting_staff_review",
+    })
+    .populate({
+      path: 'assignments.student',
+      select: 'name email',
+    });
+
+    // Formater les résultats pour ne retourner que les assignations pertinentes
+    const formattedProjects = projects.flatMap(project => {
+      return project.assignments.filter(assignment => assignment.status === "awaiting_staff_review")
+        .map(assignment => ({
+          _id: project._id, // ID du projet maître
+          projectId: project._id,
+          title: project.title,
+          description: project.description,
+          assignmentId: assignment._id,
+          assignmentStatus: assignment.status,
+          repoUrl: assignment.repoUrl,
+          submissionDate: assignment.submissionDate,
+          student: assignment.student, // L'objet étudiant peuplé
+        }));
+    });
+
+    res.status(200).json(formattedProjects);
+  } catch (e) {
+    console.error('Error fetching projects awaiting staff review:', e);
     res.status(500).json({ error: e.message });
   }
 }

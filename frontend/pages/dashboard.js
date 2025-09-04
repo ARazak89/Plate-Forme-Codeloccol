@@ -1532,32 +1532,38 @@ export default function Dashboard() {
 
 // Fonction pour gérer l'évaluation finale par le personnel
 const handleFinalStaffReview = async (projectId, assignmentId, status) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  setIsLoading(true);
+  setError(null);
+  setSuccess(null);
+
   if (!token) {
-    alert('Vous devez être connecté pour effectuer cette action.');
+    setError('Vous devez être connecté pour effectuer cette action.');
+    setIsLoading(false);
     return;
   }
 
   try {
-    const res = await fetch(`${API}/projects/${projectId}/final-evaluate`, {
+    const res = await fetch(`${API}/api/projects/${projectId}/final-review`, { // URL mise à jour
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ assignmentId, status }), // Inclure l'ID d'assignation
+      body: JSON.stringify({ assignmentId, status }), // Inclure l'ID d'assignation et le statut
     });
 
     const data = await res.json();
 
     if (res.ok) {
-      alert(data.message);
+      setSuccess(data.message);
       fetchData(); // Recharger les données du tableau de bord pour refléter les changements
     } else {
-      alert(data.error || 'Échec de l\'évaluation finale.');
+      setError(data.error || 'Échec de l\'évaluation finale.');
     }
   } catch (e) {
     console.error("Error during final staff evaluation:", e);
-    alert('Erreur lors de la communication avec le serveur.');
+    setError('Erreur lors de la communication avec le serveur.');
+  } finally {
+    setIsLoading(false);
   }
 };

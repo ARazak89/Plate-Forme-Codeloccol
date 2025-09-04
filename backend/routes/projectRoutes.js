@@ -5,7 +5,8 @@ import {
   getStudentProjects,
   assignProjectToStudent,
   submitProjectSolution,
-  approveProject,
+  finalReviewProject, // Renommé de approveProject
+  getProjectsAwaitingStaffReview,
 } from "../controllers/projectController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const router = Router();
@@ -28,7 +29,10 @@ router.post("/:id/submit-solution", requireAuth, requireRole(["apprenant"]), sub
 // Routes pour le staff/admin (lecture des projets templates)
 router.get("/", requireAuth, requireRole(["staff", "admin"]), getProjects); // Pour lister les projets templates
 
-// Route pour approuver un projet (Staff/Admin)
-router.post("/:id/approve", requireAuth, requireRole(["staff", "admin"]), approveProject);
+// Route pour l'évaluation finale d'un projet (Staff/Admin)
+router.post("/:id/final-review", requireAuth, requireRole(["staff", "admin"]), finalReviewProject); // Renommé et mis à jour
+
+// Route pour les projets en attente de révision par le staff (Staff/Admin)
+router.get("/awaiting-staff-review", requireAuth, requireRole(["staff", "admin"]), getProjectsAwaitingStaffReview);
 
 export default router;

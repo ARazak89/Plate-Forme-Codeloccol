@@ -277,12 +277,17 @@ export async function submitEvaluation(req, res) {
       );
 
       if (anyRejected) {
-        assignment.status = "rejected";
+        assignment.status = "assigned"; // Réinitialiser le statut à 'assigned' pour permettre la resoumission
+        assignment.repoUrl = undefined; // Effacer l'URL du dépôt
+        assignment.submissionDate = undefined; // Effacer la date de soumission
+        // TODO: Optionnel: effacer les évaluations existantes liées à cette assignation pour forcer de nouvelles évaluations
+        // Ou marquer les anciennes comme 'annulées' si elles ne sont plus pertinentes.
+        // Pour l'instant, nous laissons les anciennes évaluations telles quelles mais cela pourrait être ajusté.
         // Notifier l'étudiant que son projet a été rejeté par un évaluateur pair
         await Notification.create({
           user: assignment.student,
           type: "project_status_update",
-          message: `Le statut de votre projet \'${project.title}\' est maintenant : Rejeté par un évaluateur pair. Veuillez revoir votre projet.`,
+          message: `Le statut de votre projet \'${project.title}\' est maintenant : Rejeté par un évaluateur pair. Veuillez revoir votre projet et le soumettre à nouveau.`,
         });
       } else {
         // Si toutes les évaluations sont acceptées, l'assignation passe à l'état d'attente de l'évaluation du personnel
