@@ -432,7 +432,7 @@ function ProjectsPage() {
     try {
       const token = getAuthToken();
       // L'API submitProjectSolution doit maintenant prendre projectId et assignmentId
-      const res = await fetch(`${API}/api/projects/${currentProjectToSubmit.projectId}/submit`, {
+      const res = await fetch(`${API}/api/projects/${currentProjectToSubmit.projectId}/submit-solution`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
