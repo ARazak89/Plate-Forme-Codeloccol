@@ -133,11 +133,10 @@ function ProjectsPage() {
         setProjects([]); // On n'utilise plus cet état directement pour l'affichage apprenant
       }
     } catch (e) {
-        console.error("Error loading projects page data:", e);
-        setError('Error loading data: ' + e.message);
-      } finally {
-        setLoading(false);
-      }
+      setError('Error loading data: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
   }, [API, setMe, setProjects, setAllProjects, setError, setLoading, setMyProjects, setProjectsToEvaluate]); // Ajouter toutes les dépendances ici
 
   useEffect(() => {
@@ -652,7 +651,6 @@ function ProjectsPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            console.log('Opening submit modal for Project:', project.title, 'projectId:', project.projectId, 'assignmentId:', project.assignmentId);
                             handleOpenSubmitProjectModal(project);
                           }}
                           className="btn btn-primary w-100 btn-sm"

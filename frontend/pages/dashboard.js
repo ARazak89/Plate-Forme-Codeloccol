@@ -108,7 +108,6 @@ export default function Dashboard() {
         const myProjectsRes = await fetch(`${API}/api/projects/my-projects`, { headers: { Authorization: `Bearer ${token}` } });
         if (myProjectsRes.ok) {
           const rawMyProjectsData = await myProjectsRes.json();
-          console.log("Raw My Projects Data (from /api/projects/my-projects):", rawMyProjectsData);
           
           // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
           // Nous devons formater ces données pour qu'elles soient compatibles avec l'UI existante si nécessaire
@@ -138,12 +137,9 @@ export default function Dashboard() {
               return sanitizedProject;
             }
           });
-          console.log("Formatted Student Projects:", formattedStudentProjects);
           // Filtrer et trier les projets par type
           const myAssignedProjects = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
-          console.log("My Assigned Projects:", myAssignedProjects);
           const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
-          console.log("Projects To Evaluate As Apprenant:", projectsToEvaluateAsApprenant);
 
           setMyProjects(myAssignedProjects);
           setEvaluationsAsEvaluator(projectsToEvaluateAsApprenant); // Ajouter aux évaluations existantes
@@ -160,7 +156,6 @@ export default function Dashboard() {
         const evalAsEvaluatorRes = await fetch(`${API}/api/evaluations/pending-as-evaluator`, { headers: { Authorization: `Bearer ${token}` } });
         if (evalAsEvaluatorRes.ok) {
           const evalAsEvaluatorData = await evalAsEvaluatorRes.json();
-        console.log("Evaluations As Evaluator Data (from /api/evaluations/pending-as-evaluator):", evalAsEvaluatorData);
         // Nous allons remplacer complètement l'état evaluationsAsEvaluator avec les nouvelles données
           setEvaluationsAsEvaluator(evalAsEvaluatorData);
         setUpcomingEvaluations(evalAsEvaluatorData); // upcomingEvaluations est la même liste pour l'instant
