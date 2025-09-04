@@ -52,6 +52,7 @@ function ProjectsPage() {
   const [success, setSuccess] = useState(null);
   const [showErrorPopup, setShowErrorPopup] = useState(false); // Nouvel état pour le popup d'erreur
   const [errorPopupMessage, setErrorPopupMessage] = useState(''); // Message pour le popup d'erreur
+  const [popupType, setPopupType] = useState('error'); // 'error' ou 'warning'
   
   const router = useRouter();
 
@@ -411,6 +412,7 @@ function ProjectsPage() {
   const handleCloseErrorPopup = () => {
     setShowErrorPopup(false);
     setErrorPopupMessage('');
+    setPopupType('error'); // Réinitialiser le type à 'error' par défaut
   };
 
   const handleSubmitProject = async (e) => {
@@ -420,6 +422,7 @@ function ProjectsPage() {
     setLoading(true);
     setShowErrorPopup(false); // Réinitialiser le popup d'erreur au début de la soumission
     setErrorPopupMessage('');
+    setPopupType('error'); // S'assurer que le type est 'error' par défaut pour les erreurs de soumission
 
     if (!currentProjectToSubmit || selectedSlotIds.length !== 2 || (!isRepoUrlOptional && !projectSubmissionRepoUrl)) {
       let errorMessage = 'Veuillez sélectionner exactement 2 créneaux d\'évaluateurs différents.';
@@ -431,6 +434,7 @@ function ProjectsPage() {
       }
       setErrorPopupMessage(errorMessage); // Utiliser le nouvel état
       setShowErrorPopup(true); // Afficher le popup
+      setPopupType('error'); // C'est une erreur de validation de soumission
       setLoading(false);
       return;
     }
@@ -439,6 +443,7 @@ function ProjectsPage() {
     if (new Set(selectedSlotIds).size !== selectedSlotIds.length) {
       setErrorPopupMessage('Veuillez sélectionner des créneaux distincts.');
       setShowErrorPopup(true);
+      setPopupType('error'); // C'est une erreur de validation de soumission
       setLoading(false);
       return;
     }
@@ -451,6 +456,7 @@ function ProjectsPage() {
     if (uniqueEvaluators.length !== 2) {
       setErrorPopupMessage('Vous devez sélectionner exactement 2 créneaux, chacun d\'un évaluateur différent.');
       setShowErrorPopup(true);
+      setPopupType('error'); // C'est une erreur de validation de soumission
       setLoading(false);
       return;
     }
@@ -477,11 +483,15 @@ function ProjectsPage() {
         setAvailableSlots([]);
         loadData(getAuthToken()); // Recharger les données
       } else {
-        throw new Error(data.error || 'Échec de la soumission du projet.');
+        setErrorPopupMessage(data.error || 'Échec de la soumission du projet.'); // Utiliser le popup
+        setShowErrorPopup(true);
+        setPopupType('error');
       }
     } catch (e) {
       console.error("Error submitting project:", e);
-      setError(e.message);
+      setErrorPopupMessage(e.message || 'Erreur lors de la communication avec le serveur.'); // Utiliser le popup
+      setShowErrorPopup(true);
+      setPopupType('error');
     } finally {
       setLoading(false);
     }
@@ -495,6 +505,10 @@ function ProjectsPage() {
     setAvailableSlots([]);
     setError(null);
     setSuccess(null);
+    // Réinitialiser les états du popup d'erreur/avertissement
+    setShowErrorPopup(false);
+    setErrorPopupMessage('');
+    setPopupType('error');
   };
 
   // Déplacer la définition de isRepoUrlOptional ici pour la rendre disponible dans le JSX de la modale
@@ -1237,12 +1251,22 @@ function ProjectsPage() {
                                   if (e.target.checked) {
                                     if (selectedSlotIds.length < 2) {
                                       setSelectedSlotIds([...selectedSlotIds, slot._id]);
+                                      setError(null); // Clear any previous inline error
                                     } else {
-                                      setError('Vous ne pouvez sélectionner que 2 créneaux maximum.');
+                                      // Afficher le popup d'avertissement
+                                      setErrorPopupMessage('Vous ne pouvez sélectionner que 2 créneaux maximum.');
+                                      setShowErrorPopup(true);
+                                      setPopupType('warning');
                                     }
                                   } else {
                                     setSelectedSlotIds(selectedSlotIds.filter(id => id !== slot._id));
                                     setError(null);
+                                    // Si l'utilisateur décoche et qu'il n'y a plus de créneaux sélectionnés ou si c'est une erreur résolue, on peut cacher le popup d'avertissement
+                                    if (selectedSlotIds.length <= 2 && popupType === 'warning') {
+                                      setShowErrorPopup(false);
+                                      setErrorPopupMessage('');
+                                      setPopupType('error');
+                                    }
                                   }
                                 }}
                               />
@@ -1312,15 +1336,15 @@ function ProjectsPage() {
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog modal-sm">
             <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
-                <h5 className="modal-title"><i className="bi bi-exclamation-triangle me-2"></i> Erreur</h5>
+              <div className={`modal-header bg-${popupType === 'warning' ? 'warning text-dark' : 'danger text-white'}`}>
+                <h5 className="modal-title"><i className={`bi bi-exclamation-triangle me-2`}></i> {popupType === 'warning' ? 'Avertissement' : 'Erreur'}</h5>
                 <button type="button" className="btn-close btn-close-white" onClick={handleCloseErrorPopup}></button>
               </div>
               <div className="modal-body">
                 <p>{errorPopupMessage}</p>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-danger" onClick={handleCloseErrorPopup}>Fermer</button>
+                <button type="button" className={`btn btn-${popupType === 'warning' ? 'warning text-dark' : 'danger'}`} onClick={handleCloseErrorPopup}>Fermer</button>
               </div>
             </div>
           </div>
