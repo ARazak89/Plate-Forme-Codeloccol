@@ -101,15 +101,15 @@ function ProjectsPage() {
           const rawProjects = await myProjectsRes.json();
         // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
         const formattedStudentProjects = rawProjects.map(project => {
-            // Puisque le backend renvoie déjà les projets formatés avec l'assignation pertinente fusionnée,
-            // nous pouvons simplement appliquer le nettoyage des tableaux ici.
-            return sanitizeProjectArrays(project);
+            const sanitizedProject = sanitizeProjectArrays(project);
+            // Le backend renvoie déjà projectId comme une propriété distincte, nous n'avons qu'à l'assurer.
+            // S'assurer que l'ID du projet maître est disponible sous `projectId` et `_id` est l'ID de l'assignation.
+            return { ...sanitizedProject, _id: sanitizedProject.assignmentId, projectId: sanitizedProject.projectId };
         });
 
-        // Filtrer les projets par type (si le backend fournit un champ 'type')
-        // Si le backend ne fournit pas de 'type', tous seront considérés comme 'my_project' par défaut pour l'affichage ici.
-        const myAssigned = formattedStudentProjects.filter(p => p.assignmentStatus !== 'pending_evaluation').sort((a, b) => (a.order || 0) - (b.order || 0));
-        const toEvaluate = formattedStudentProjects.filter(p => p.assignmentStatus === 'pending_evaluation').sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Filtrer les projets par statut d'assignation
+        const myAssigned = formattedStudentProjects.filter(p => p.assignmentStatus !== 'submitted' && p.assignmentStatus !== 'pending_review').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const toEvaluate = formattedStudentProjects.filter(p => p.assignmentStatus === 'submitted' || p.assignmentStatus === 'pending_review').sort((a, b) => (a.order || 0) - (b.order || 0));
 
         setMyProjects(myAssigned);
         setProjectsToEvaluate(toEvaluate);
@@ -383,7 +383,6 @@ function ProjectsPage() {
       const token = getAuthToken();
       // Charger les slots disponibles pour ce projet
       // La route doit maintenant prendre projectId et assignmentId
-      console.log(`Fetching available slots for Project ID: ${project.projectId}, Assignment ID: ${project.assignmentId}`);
       const slotsRes = await fetch(`${API}/api/availability/available-for-project/${project.projectId}/${project.assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
