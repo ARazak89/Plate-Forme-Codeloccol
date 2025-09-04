@@ -5,6 +5,7 @@ import {
   getStudentProjects,
   assignProjectToStudent,
   submitProjectSolution,
+  approveProject,
 } from "../controllers/projectController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const router = Router();
@@ -26,5 +27,8 @@ router.post("/:id/submit-solution", requireAuth, requireRole(["apprenant"]), sub
 
 // Routes pour le staff/admin (lecture des projets templates)
 router.get("/", requireAuth, requireRole(["staff", "admin"]), getProjects); // Pour lister les projets templates
+
+// Route pour approuver un projet (Staff/Admin)
+router.post("/:id/approve", requireAuth, requireRole(["staff", "admin"]), approveProject);
 
 export default router;
