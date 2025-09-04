@@ -15,6 +15,7 @@ const evaluationSchema = new mongoose.Schema(
       maitrise_concepts: { type: String, default: "" },
       capacite_expliquer: { type: String, default: "" },
     },
+    slot: { type: mongoose.Schema.Types.ObjectId, ref: "AvailabilitySlot" }, // Ajout du champ slot
     status: { type: String, enum: ["pending", "accepted", "rejected"], default: "pending" },
   },
   { timestamps: true },
