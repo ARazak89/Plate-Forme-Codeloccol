@@ -101,32 +101,15 @@ function ProjectsPage() {
           const rawProjects = await myProjectsRes.json();
         // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
         const formattedStudentProjects = rawProjects.map(project => {
-            const sanitizedProject = sanitizeProjectArrays(project);
-            const assignment = sanitizedProject.assignments && sanitizedProject.assignments.length > 0 ? sanitizedProject.assignments[0] : null;
-            
-            if (assignment) {
-              const formattedProject = {
-                ...sanitizedProject, // Détails du projet maître
-                projectId: sanitizedProject._id, // Stocker l'ID du projet maître séparément
-                ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
-                _id: assignment._id, // L'ID principal de l'objet pour React key et autres utilisations sera l'ID de l'assignation
-                assignmentId: assignment._id, // Ajouter l'ID de l'assignation pour faciliter l'utilisation
-                student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Références directes pour compatibilité UI
-                evaluations: (assignment.evaluations || []).map(evalItem => ({
-                  ...evalItem,
-                  evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
-                })),
-                type: project.type, // Conserver le type du projet
-              };
-              return formattedProject;
-            } else {
-              return sanitizedProject;
-            }
+            // Puisque le backend renvoie déjà les projets formatés avec l'assignation pertinente fusionnée,
+            // nous pouvons simplement appliquer le nettoyage des tableaux ici.
+            return sanitizeProjectArrays(project);
         });
 
-        // Filtrer les projets par type
-        const myAssigned = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
-        const toEvaluate = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Filtrer les projets par type (si le backend fournit un champ 'type')
+        // Si le backend ne fournit pas de 'type', tous seront considérés comme 'my_project' par défaut pour l'affichage ici.
+        const myAssigned = formattedStudentProjects.filter(p => p.assignmentStatus !== 'pending_evaluation').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const toEvaluate = formattedStudentProjects.filter(p => p.assignmentStatus === 'pending_evaluation').sort((a, b) => (a.order || 0) - (b.order || 0));
 
         setMyProjects(myAssigned);
         setProjectsToEvaluate(toEvaluate);
