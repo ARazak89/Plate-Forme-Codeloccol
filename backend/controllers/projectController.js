@@ -141,10 +141,11 @@ export async function getStudentProjects(req, res) {
       const studentAssignment = project.assignments.find(assignment => assignment.student._id.equals(studentId));
       if (studentAssignment) {
         return {
-          _id: project._id,
+          _id: studentAssignment._id, // L'ID de l'assignation devient l'ID principal
+          projectId: project._id, // Ajout de l'ID du projet maître
           title: project.title,
           description: project.description,
-          status: project.status,
+          status: project.status, // Statut du projet maître
           assignmentId: studentAssignment._id,
           assignmentStatus: studentAssignment.status,
           repoUrl: studentAssignment.repoUrl,
