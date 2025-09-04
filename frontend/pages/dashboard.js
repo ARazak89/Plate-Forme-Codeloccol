@@ -1237,7 +1237,7 @@ export default function Dashboard() {
                   <button className="btn btn-light btn-sm me-2" onClick={() => router.push('/hackathons')}>
                     <i className="bi bi-lightbulb me-1"></i> Gérer les Hackathons
                   </button>
-                <button className="btn btn-light btn-sm" onClick={() => setShowAddProjectModal(true)}>
+                <button className="btn btn-light btn-sm" onClick={() => router.push('/projects?openAddProject=true')}>
                   <i className="bi bi-plus-circle me-1"></i> Ajouter un Projet
                 </button>
                 </div>

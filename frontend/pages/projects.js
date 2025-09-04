@@ -136,7 +136,15 @@ function ProjectsPage() {
     }
 
     loadData(token); // Passer le token à loadData
-  }, [router, loadData]); // Ajouter loadData aux dépendances du useEffect
+
+    // Vérifier les paramètres d'URL pour ouvrir la modale d'ajout de projet si nécessaire
+    const { openAddProject } = router.query;
+    if (openAddProject === 'true') {
+      handleShowAddProjectModal();
+      // Supprimer le paramètre d'URL après l'avoir utilisé pour éviter de réouvrir la modale à chaque rafraîchissement
+      router.replace('/projects', undefined, { shallow: true });
+    }
+  }, [router, loadData, handleShowAddProjectModal]); // Ajouter handleShowAddProjectModal aux dépendances du useEffect
 
   const getEmbedUrl = (url) => {
     if (!url) return null;
@@ -565,7 +573,7 @@ function ProjectsPage() {
                         <tr className="table-primary">
                           <td><strong>{projectGroup.order}</strong></td>
                           <td><i className="bi bi-folder-fill me-2 text-primary"></i><strong>{projectGroup.title}</strong></td>
-                          <td>{projectGroup.description.substring(0, 70)}...</td>
+                          <td>{(projectGroup.description || '').substring(0, 70)}...</td>
                           <td><span className="badge bg-dark rounded-pill"><i className="bi bi-gear me-1"></i> Maître</span></td>
                           <td>N/A</td>
                           <td><span className="badge bg-secondary rounded-pill"><i className="bi bi-puzzle-fill me-1"></i> Actif</span></td>
@@ -583,7 +591,7 @@ function ProjectsPage() {
                             <tr key={assignedProject._id}>
                               <td></td> {/* Cellule vide pour l'alignement */}
                               <td><i className="bi bi-arrow-return-right me-2 text-muted"></i> {assignedProject.title}</td>
-                              <td><small>{assignedProject.description.substring(0, 50)}...</small></td>
+                              <td><small>{(assignedProject.description || '').substring(0, 50)}...</small></td>
                               <td><span className="badge bg-success rounded-pill"><i className="bi bi-person-check me-1"></i> Apprenant</span></td>
                               <td>{assignedProject.student ? assignedProject.student.name : 'N/A'}</td>
                               <td>
