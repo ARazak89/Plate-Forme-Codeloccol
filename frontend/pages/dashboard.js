@@ -112,37 +112,21 @@ export default function Dashboard() {
           // Les projets reçus sont déjà filtrés pour l'utilisateur et contiennent seulement l'assignation pertinente
           // Nous devons formater ces données pour qu'elles soient compatibles avec l'UI existante si nécessaire
           const formattedStudentProjects = rawMyProjectsData.map(project => {
-            // Ici, nous nous assurons que les propriétés sont des tableaux pour éviter les erreurs R.map
-            const sanitizedProject = {
-              ...project,
-              objectives: project.objectives || [],
-              specifications: project.specifications || [],
-              exerciseStatements: project.exerciseStatements || [],
-              resourceLinks: project.resourceLinks || [],
-            };
-            const assignment = sanitizedProject.assignments && sanitizedProject.assignments.length > 0 ? sanitizedProject.assignments[0] : null;
-
-            if (assignment) {
-              return {
-                ...sanitizedProject, // Détails du projet maître
-                ...assignment,       // Détails de l'assignation (status, repoUrl, submissionDate, etc.)
-                assignmentId: assignment._id, // Ajouter l'ID de l'assignation pour faciliter l'utilisation
-                student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Références directes pour compatibilité UI
-                evaluations: (assignment.evaluations || []).map(evalItem => ({
-                  ...evalItem,
-                  evaluator: evalItem.evaluator ? { _id: evalItem.evaluator._id, name: evalItem.evaluator.name } : null,
-                })),
-              };
-            } else {
-              return sanitizedProject;
+            const sanitizedProject = sanitizeProjectArrays(project);
+            // Définir le type basé sur assignmentStatus
+            let type = 'my_project';
+            if (sanitizedProject.assignmentStatus === 'submitted') {
+              type = 'to_evaluate'; // Si l'apprenant a soumis, il peut aussi être évaluateur peer
             }
+            return { ...sanitizedProject, type };
           });
-          // Filtrer et trier les projets par type
+
+          // Filtrer et trier les projets
           const myAssignedProjects = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
           const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMyProjects(myAssignedProjects);
-          setEvaluationsAsEvaluator(projectsToEvaluateAsApprenant); // Ajouter aux évaluations existantes
+          setEvaluationsAsEvaluator(prevEvals => [...prevEvals, ...projectsToEvaluateAsApprenant]); // Ajouter aux évaluations existantes
 
           
         } else {
@@ -708,7 +692,7 @@ export default function Dashboard() {
       )}
 
       {/* Section des évaluations de MES PROJETS SOUMIS */}
-      {me && me.role === 'apprenant' && myProjects.filter(p => p.status === 'pending' || p.status === 'awaiting_staff_review').length > 0 && (
+      {me && me.role === 'apprenant' && myProjects.filter(p => p.assignmentStatus === 'submitted' || p.assignmentStatus === 'pending_review').length > 0 && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm">
@@ -718,13 +702,13 @@ export default function Dashboard() {
               </div>
               <div className="card-body">
                 <div className="list-group list-group-flush">
-                  {myProjects.filter(p => p.status === 'pending' || p.status === 'awaiting_staff_review').map(project => (
+                  {myProjects.filter(p => p.assignmentStatus === 'submitted' || p.assignmentStatus === 'pending_review').map(project => (
                       <div key={project.assignmentId} className="card mb-3 shadow-sm border-info">
                         <div className="card-body">
                           <h5 className="card-title d-flex align-items-center mb-2">
                             <i className="bi bi-journal-text me-2 text-info"></i> Projet: {project.title}
-                            {project.status === 'pending' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En attente d\'évaluation</span>}
-                            {project.status === 'awaiting_staff_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
+                            {project.assignmentStatus === 'submitted' && <span className="badge bg-warning text-dark ms-2 rounded-pill"><i className="bi bi-hourglass-split me-1"></i> En attente d\'évaluation</span>}
+                            {project.assignmentStatus === 'pending_review' && <span className="badge bg-info ms-2 rounded-pill"><i className="bi bi-person-workspace me-1"></i> En Attente Staff</span>}
                           </h5>
                           <p className="card-text mb-1 d-flex align-items-center"><i className="bi bi-person-check me-2 text-muted"></i> Évaluateurs: 
                             {project.peerEvaluators && project.peerEvaluators.length > 0 ? 
@@ -764,43 +748,46 @@ export default function Dashboard() {
                           <h5 className="card-title d-flex align-items-center mb-1">
                             <i className="bi bi-folder-open me-2 text-success"></i> {project.title}
                             <span className={`badge rounded-pill bg-${(() => {
-                              if (project.repoUrl) {
-                                // Project has been submitted
-                                if (project.status === 'pending') return 'warning text-dark';
-                                if (project.status === 'awaiting_staff_review') return 'info';
-                                if (project.status === 'approved') return 'success';
-                                if (project.status === 'rejected') return 'danger';
-                              } else {
-                                // Project is assigned but not submitted
+                              if (project.assignmentStatus === 'submitted') {
+                                return 'warning text-dark';
+                              } else if (project.assignmentStatus === 'pending_review') {
                                 return 'info';
+                              } else if (project.assignmentStatus === 'approved') {
+                                return 'success';
+                              } else if (project.assignmentStatus === 'rejected') {
+                                return 'danger';
+                              } else if (project.assignmentStatus === 'assigned') {
+                                return 'primary'; // Statut assigné
                               }
-                              return 'secondary'; // Fallback
+                              return 'secondary';
                             })()} ms-2`}>
                               <i className={`bi bi-${(() => {
-                                if (project.repoUrl) {
-                                  // Project has been submitted
-                                  if (project.status === 'pending') return 'hourglass-split';
-                                  if (project.status === 'awaiting_staff_review') return 'person-workspace';
-                                  if (project.status === 'approved') return 'check-circle';
-                                  if (project.status === 'rejected') return 'x-circle';
-                                } else {
-                                  // Project is assigned but not submitted
+                                if (project.assignmentStatus === 'submitted') {
+                                  return 'hourglass-split';
+                                } else if (project.assignmentStatus === 'pending_review') {
+                                  return 'person-workspace';
+                                } else if (project.assignmentStatus === 'approved') {
+                                  return 'check-circle';
+                                } else if (project.assignmentStatus === 'rejected') {
+                                  return 'x-circle';
+                                } else if (project.assignmentStatus === 'assigned') {
                                   return 'clock';
                                 }
-                                return 'question-circle'; // Fallback
+                                return 'question-circle';
                               })()} me-1`}></i>
                               {(() => {
-                                if (project.repoUrl) {
-                                  // Project has been submitted
-                                  if (project.status === 'pending') return 'En attente d\'évaluation';
-                                  if (project.status === 'awaiting_staff_review') return 'En attente Staff';
-                                  if (project.status === 'approved') return 'Approuvé';
-                                  if (project.status === 'rejected') return 'Rejeté';
-                                } else {
-                                  // Project is assigned but not submitted
+                                if (project.assignmentStatus === 'submitted') {
+                                  return 'Soumis (en attente d\'évaluation)';
+                                } else if (project.assignmentStatus === 'pending_review') {
+                                  return 'En attente Staff';
+                                } else if (project.assignmentStatus === 'approved') {
+                                  return 'Approuvé';
+                                } else if (project.assignmentStatus === 'rejected') {
+                                  return 'Rejeté';
+                                } else if (project.assignmentStatus === 'assigned') {
                                   return 'Assigné';
                                 }
-                                return 'Statut Inconnu'; // Fallback
+                                return 'Statut Inconnu';
                               })()}
                             </span>
                             {project.order && (

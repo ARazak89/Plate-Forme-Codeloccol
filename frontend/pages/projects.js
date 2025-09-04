@@ -609,28 +609,34 @@ function ProjectsPage() {
                     {/* Indicateur de statut avec icône */}
                       <div className="mt-3 mb-3 d-flex align-items-center">
                       <span className={`badge rounded-pill bg-${
-                        project.status === 'assigned' ? 'warning text-dark' : 
-                        project.status === 'pending' ? 'info' : 
-                        'success'
+                        project.assignmentStatus === 'assigned' ? 'warning text-dark' : 
+                        project.assignmentStatus === 'submitted' ? 'info' : // Nouveau statut pour "soumis"
+                        project.assignmentStatus === 'approved' ? 'success' : // Statut approuvé
+                        project.assignmentStatus === 'rejected' ? 'danger' : // Statut rejeté
+                        'secondary' // Statut par défaut
                       } me-2`}>
                         <i className={`bi bi-${
-                          project.status === 'assigned' ? 'clock' : 
-                          project.status === 'pending' ? 'hourglass-split' : 
-                          'check-circle'
+                        project.assignmentStatus === 'assigned' ? 'clock' : 
+                        project.assignmentStatus === 'submitted' ? 'hourglass-split' : 
+                        project.assignmentStatus === 'approved' ? 'check-circle' : 
+                        project.assignmentStatus === 'rejected' ? 'x-circle' : 
+                        'question-circle'
                         } me-1`}></i>
-                        {project.status === 'assigned' ? 'Assigné' : 
-                         project.status === 'pending' ? 'En cours d\'évaluation' : 
-                         'Approuvé'}
+                        {project.assignmentStatus === 'assigned' ? 'Assigné' : 
+                         project.assignmentStatus === 'submitted' ? 'Soumis (en attente d\'évaluation)' : 
+                         project.assignmentStatus === 'approved' ? 'Approuvé' : 
+                         project.assignmentStatus === 'rejected' ? 'Rejeté' : 
+                         'Inconnu'}
                     </span>
                       
                       {/* Message spécial pour les projets approuvés */}
-                      {project.status === 'approved' && (
+                      {project.assignmentStatus === 'approved' && (
                           <span className="text-success small"><i className="bi bi-trophy-fill me-1"></i> Projet Approuvé !</span>
                       )}
                 </div>
 
                     {/* Bouton de soumission pour les projets assignés */}
-                    {project.status === 'assigned' && (
+                    {project.assignmentStatus === 'assigned' && (
                       <div className="mt-auto">
                         <button
                           onClick={(e) => {
