@@ -131,7 +131,7 @@ export default function Dashboard() {
           });
 
           // Filtrer et trier les projets
-          const myAssignedProjects = formattedStudentProjects.filter(p => p.type === 'my_project').sort((a, b) => (a.order || 0) - (b.order || 0));
+          const myAssignedProjects = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
           const projectsToEvaluateAsApprenant = formattedStudentProjects.filter(p => p.type === 'to_evaluate').sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMyProjects(myAssignedProjects);

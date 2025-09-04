@@ -107,12 +107,15 @@ function ProjectsPage() {
             return { ...sanitizedProject, _id: sanitizedProject.assignmentId, projectId: sanitizedProject.projectId };
         });
 
-        // Filtrer les projets par statut d'assignation
-        const myAssigned = formattedStudentProjects.filter(p => p.assignmentStatus !== 'submitted' && p.assignmentStatus !== 'pending_review').sort((a, b) => (a.order || 0) - (b.order || 0));
-        const toEvaluate = formattedStudentProjects.filter(p => p.assignmentStatus === 'submitted' || p.assignmentStatus === 'pending_review').sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        setMyProjects(myAssigned);
-        setProjectsToEvaluate(toEvaluate);
+        // myProjects doit contenir TOUS les projets assignés à l'apprenant, y compris ceux soumis, en attente, etc.
+        // La logique d'affichage des cartes gérera les statuts individuels.
+        const allStudentAssignments = formattedStudentProjects.sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        // projectsToEvaluate devrait uniquement contenir les évaluations que l'apprenant DOIT faire (en tant que pair)
+        // Ces données sont généralement récupérées par un appel à /api/evaluations/pending-as-evaluator
+        // Pour l'instant, nous laissons cette liste vide ici ou laissons le dashboard la gérer.
+        setMyProjects(allStudentAssignments);
+        setProjectsToEvaluate([]); // Vider cette liste ici, elle est gérée dans le dashboard si nécessaire
         setProjects([]); // On n'utilise plus cet état directement pour l'affichage apprenant
       }
     } catch (e) {

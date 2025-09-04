@@ -246,6 +246,7 @@ export async function submitProjectSolution(req, res) {
         evaluator: slot.evaluator,
         student: studentId,
         status: 'pending',
+        slot: slot._id, // Ajout de la référence au slot
       });
       assignment.evaluations.push(evaluation._id);
     }
