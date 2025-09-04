@@ -421,13 +421,20 @@ function ProjectsPage() {
       return;
     }
 
+    // Vérifier que les créneaux sélectionnés sont uniques
+    if (new Set(selectedSlotIds).size !== selectedSlotIds.length) {
+      setError('Veuillez sélectionner des créneaux distincts.');
+      setLoading(false);
+      return;
+    }
+
     // Vérifier que les 2 slots sont d'évaluateurs différents
     const selectedSlots = availableSlots.filter(slot => selectedSlotIds.includes(slot._id));
     const evaluatorIds = selectedSlots.map(slot => slot.evaluator._id);
     const uniqueEvaluators = [...new Set(evaluatorIds)];
     
     if (uniqueEvaluators.length !== 2) {
-      setError('Vous devez sélectionner exactement 2 créneaux d\'évaluateurs différents.');
+      setError('Vous devez sélectionner exactement 2 créneaux, chacun d\'un évaluateur différent.');
       setLoading(false);
       return;
     }
