@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getAuthToken } from '../utils/auth';
 import React from 'react'; // Added for React.Fragment
@@ -24,6 +24,13 @@ function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState(null); // Nouvel état pour le projet sélectionné
   const [me, setMe] = useState(null); // Pour stocker les infos de l'utilisateur (rôle)
   const [allProjects, setAllProjects] = useState([]); // Pour stocker tous les projets (staff/admin)
+  const allProjectsRef = useRef(allProjects); // Créez une réf pour allProjects
+  
+  // Synchronisez la réf avec l'état actuel d'allProjects
+  useEffect(() => {
+    allProjectsRef.current = allProjects;
+  }, [allProjects]);
+
   // États pour les modales CRUD des projets
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
@@ -130,7 +137,7 @@ function ProjectsPage() {
 
   const handleShowAddProjectModal = useCallback(() => {
     // Calculer le plus grand numéro d'ordre existant parmi les templates de projet
-    const maxOrder = allProjects.reduce((max, projectGroup) => {
+    const maxOrder = allProjectsRef.current.reduce((max, projectGroup) => {
       return Math.max(max, projectGroup.order || 0);
     }, 0);
     setProjectOrder(maxOrder + 1);
@@ -146,7 +153,7 @@ function ProjectsPage() {
     setProjectResourceLinks([]);
     setProjectObjectives([]);
     setError(null);
-  }, [allProjects, setProjectOrder, setShowAddProjectModal, setProjectTitle, setProjectDescription, setProjectRepoUrl, setProjectDemoVideoUrl, setProjectSpecifications, setProjectSize, setProjectExerciseStatements, setProjectResourceLinks, setProjectObjectives, setError]);
+  }, [setProjectOrder, setShowAddProjectModal, setProjectTitle, setProjectDescription, setProjectRepoUrl, setProjectDemoVideoUrl, setProjectSpecifications, setProjectSize, setProjectExerciseStatements, setProjectResourceLinks, setProjectObjectives, setError]); // allProjects est retiré des dépendances ici
 
   useEffect(() => {
     const token = getAuthToken();
@@ -164,7 +171,7 @@ function ProjectsPage() {
       // Supprimer le paramètre d'URL après l'avoir utilisé pour éviter de réouvrir la modale à chaque rafraîchissement
       router.replace('/projects', undefined, { shallow: true });
     }
-  }, [router, loadData, handleShowAddProjectModal]); // Ajouter handleShowAddProjectModal aux dépendances du useEffect
+  }, [router, loadData, handleShowAddProjectModal]); // handleShowAddProjectModal est toujours une dépendance
 
   const getEmbedUrl = (url) => {
     if (!url) return null;
