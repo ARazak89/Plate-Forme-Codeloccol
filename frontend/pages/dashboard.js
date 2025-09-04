@@ -1126,8 +1126,30 @@ export default function Dashboard() {
                             <td className="text-center"><span className="badge bg-info">{learner.daysRemaining}</span></td>
                             <td>
                               {learner.assignedProject ? (
-                                <span className={`badge rounded-pill bg-${learner.assignedProject.status === 'assigned' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'}`}>
-                                  {learner.assignedProject.title}
+                                <span className={`badge rounded-pill bg-${(() => {
+                                  if (learner.assignedProject.status === 'assigned') return 'primary';
+                                  if (learner.assignedProject.status === 'submitted') return 'warning text-dark';
+                                  if (learner.assignedProject.status === 'pending_review') return 'info';
+                                  if (learner.assignedProject.status === 'approved') return 'success';
+                                  if (learner.assignedProject.status === 'rejected') return 'danger';
+                                  return 'secondary'; // Fallback
+                                })()}`}>
+                                  <i className={`bi bi-${(() => {
+                                    if (learner.assignedProject.status === 'assigned') return 'clock';
+                                    if (learner.assignedProject.status === 'submitted') return 'hourglass-split';
+                                    if (learner.assignedProject.status === 'pending_review') return 'person-workspace';
+                                    if (learner.assignedProject.status === 'approved') return 'check-circle';
+                                    if (learner.assignedProject.status === 'rejected') return 'x-circle';
+                                    return 'question-circle';
+                                  })()} me-1`}></i>
+                                  {(() => {
+                                    if (learner.assignedProject.status === 'assigned') return 'Assigné';
+                                    if (learner.assignedProject.status === 'submitted') return 'Soumis (en attente)';
+                                    if (learner.assignedProject.status === 'pending_review') return 'En attente Staff';
+                                    if (learner.assignedProject.status === 'approved') return 'Approuvé';
+                                    if (learner.assignedProject.status === 'rejected') return 'Rejeté';
+                                    return 'Statut Inconnu';
+                                  })()}: {learner.assignedProject.title}
                                 </span>
                               ) : (
                                 <span className="badge rounded-pill bg-secondary">Aucun</span>
@@ -1162,7 +1184,25 @@ export default function Dashboard() {
                                     {learner.assignedProject ? (
                                       <>
                                         <p className="mb-1 d-flex align-items-center"><i className="bi bi-journal-text me-2 text-primary"></i> Titre: <strong>{learner.assignedProject.title}</strong></p>
-                                      <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: <span className={`badge bg-${learner.assignedProject.status === 'info' ? 'info' : learner.assignedProject.status === 'pending' ? 'warning' : 'success'} ms-1`}>{learner.assignedProject.status}</span></p>
+                                      <p className="mb-1 d-flex align-items-center"><i className="bi bi-info-circle me-2 text-info"></i> Statut: 
+                                        <span className={`badge bg-${(() => {
+                                          if (learner.assignedProject.status === 'assigned') return 'primary';
+                                          if (learner.assignedProject.status === 'submitted') return 'warning text-dark';
+                                          if (learner.assignedProject.status === 'pending_review') return 'info';
+                                          if (learner.assignedProject.status === 'approved') return 'success';
+                                          if (learner.assignedProject.status === 'rejected') return 'danger';
+                                          return 'secondary'; // Fallback
+                                        })()} ms-1`}>
+                                          {(() => {
+                                            if (learner.assignedProject.status === 'assigned') return 'Assigné';
+                                            if (learner.assignedProject.status === 'submitted') return 'Soumis (en attente)';
+                                            if (learner.assignedProject.status === 'pending_review') return 'En attente Staff';
+                                            if (learner.assignedProject.status === 'approved') return 'Approuvé';
+                                            if (learner.assignedProject.status === 'rejected') return 'Rejeté';
+                                            return 'Statut Inconnu';
+                                          })()}
+                                        </span>
+                                      </p>
                                         {learner.assignedProject.repoUrl && <p className="mb-1 d-flex align-items-center"><i className="bi bi-github me-2 text-dark"></i> Dépôt: <a href={learner.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{learner.assignedProject.repoUrl}</a></p>}
                                         {learner.assignedProject.submissionDate && <p className="mb-1 d-flex align-items-center"><i className="bi bi-calendar-event me-2 text-muted"></i> Date de soumission: {new Date(learner.assignedProject.submissionDate).toLocaleDateString()}</p>}
                                       </>

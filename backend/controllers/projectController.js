@@ -385,3 +385,26 @@ export async function getProjectsAwaitingStaffReview(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function getAllProjects(req, res) {
+  try {
+    // Vérifier que l'utilisateur est un membre du personnel/admin
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Non autorisé à consulter cette ressource.',
+      });
+    }
+
+    // Récupérer tous les projets, en peuplant les étudiants associés aux assignations
+    const projects = await Project.find({})
+      .populate({
+        path: 'assignments.student',
+        select: 'name email',
+      });
+
+    res.status(200).json(projects);
+  } catch (e) {
+    console.error('Error fetching all projects:', e);
+    res.status(500).json({ error: e.message });
+  }
+}

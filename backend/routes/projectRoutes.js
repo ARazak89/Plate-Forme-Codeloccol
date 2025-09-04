@@ -7,6 +7,7 @@ import {
   submitProjectSolution,
   finalReviewProject, // Renommé de approveProject
   getProjectsAwaitingStaffReview,
+  getAllProjects, // Ajout du contrôleur pour récupérer tous les projets
 } from "../controllers/projectController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const router = Router();
@@ -34,5 +35,8 @@ router.post("/:id/final-review", requireAuth, requireRole(["staff", "admin"]), f
 
 // Route pour les projets en attente de révision par le staff (Staff/Admin)
 router.get("/awaiting-staff-review", requireAuth, requireRole(["staff", "admin"]), getProjectsAwaitingStaffReview);
+
+// Route pour récupérer tous les projets (Staff/Admin)
+router.get("/all", requireAuth, requireRole(["staff", "admin"]), getAllProjects);
 
 export default router;

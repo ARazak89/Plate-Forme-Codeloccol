@@ -172,25 +172,27 @@ export async function listUsers(req, res) {
 
     // Nous devons filtrer et extraire l'assignation pertinente pour chaque utilisateur manuellement
     const usersWithAssignedProject = users.map((user) => {
-      let assignedProject = null;
+      let latestAssignedProject = null;
+      let latestAssignmentDate = null;
+
       if (user.projects && user.projects.length > 0) {
-        // Pour chaque projet maître, trouver l'assignation de cet utilisateur
         for (const project of user.projects) {
           const assignment = project.assignments.find(
-            (assign) => assign.student.equals(user._id)
+            (assign) => assign.student && assign.student.equals(user._id) // Vérifier que assign.student existe
           );
           if (assignment) {
-            // Nous avons trouvé l'assignation de cet étudiant pour ce projet maître
-            // Nous voulons le projet avec le statut 'assigned' ou 'pending' pour l'affichage principal
-            if (assignment.status === 'assigned' || assignment.status === 'pending') {
-              assignedProject = {
-                title: project.title, // Titre du projet maître
-                order: project.order, // Ordre du projet maître
-                id: project._id, // ID du projet maître
-                assignmentId: assignment._id, // ID de l'assignation
-                status: assignment.status, // Statut de l'assignation
+            const assignmentDate = assignment.submissionDate || project.createdAt; // Utiliser la date de soumission ou de création du projet
+            if (!latestAssignedProject || (assignmentDate && assignmentDate > latestAssignmentDate)) {
+              latestAssignedProject = {
+                title: project.title,
+                order: project.order,
+                id: project._id,
+                assignmentId: assignment._id,
+                status: assignment.status, // Inclure tous les statuts d'assignation
+                repoUrl: assignment.repoUrl,
+                submissionDate: assignment.submissionDate,
               };
-              break; // Une fois un projet assigné/en attente trouvé, on s'arrête
+              latestAssignmentDate = assignmentDate;
             }
           }
         }
@@ -203,7 +205,7 @@ export async function listUsers(req, res) {
         role: user.role,
         level: user.level,
         daysRemaining: user.daysRemaining,
-        assignedProject: assignedProject, // L'objet assignedProject que nous venons de construire
+        assignedProject: latestAssignedProject, // Le projet assigné le plus récent
       };
     });
 
