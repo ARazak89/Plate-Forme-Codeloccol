@@ -17,10 +17,16 @@ export async function getEvaluationsForMySubmittedProjects(req, res) {
 
     const formattedEvaluations = evaluations.map(evalItem => {
       const project = evalItem.project;
-      if (!project) return evalItem; // Handle case where project might be null (if deleted)
+      if (!project) {
+        console.warn(`[getEvaluationsForMySubmittedProjects] Project not found for evaluation ${evalItem._id}.`);
+        return evalItem; // Handle case where project might be null (if deleted)
+      }
 
       const assignment = project.assignments.id(evalItem.assignment); // Find the specific assignment by its ID
-      if (!assignment) return evalItem; // Handle case where assignment might be null
+      if (!assignment) {
+        console.warn(`[getEvaluationsForMySubmittedProjects] Assignment ${evalItem.assignment} not found within project ${project._id} for evaluation ${evalItem._id}.`);
+        return evalItem; // Handle case where assignment might be null
+      }
 
       // Construct a new object with the desired project and assignment details
       return {
