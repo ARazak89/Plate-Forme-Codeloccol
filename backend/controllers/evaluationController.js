@@ -12,7 +12,7 @@ export async function getEvaluationsForMySubmittedProjects(req, res) {
     const evaluations = await Evaluation.find({ student: studentId })
       .populate("project") // Populate the entire project to access its assignments
       .populate("evaluator", "name")
-      .populate("slot", "startTime endTime")
+      .populate("slot") // Populate the slot
       .sort("-createdAt");
 
     const formattedEvaluations = evaluations.map(evalItem => {
@@ -28,7 +28,6 @@ export async function getEvaluationsForMySubmittedProjects(req, res) {
         return evalItem; // Handle case where assignment might be null
       }
 
-      // Construct a new object with the desired project and assignment details
       return {
         ...evalItem.toObject(),
         project: { // Only include necessary project master details
@@ -50,6 +49,12 @@ export async function getEvaluationsForMySubmittedProjects(req, res) {
           submissionDate: assignment.submissionDate,
           // Add other assignment fields as needed
         },
+        slot: evalItem.slot ? { // Include slot details if it exists
+          _id: evalItem.slot._id,
+          startTime: evalItem.slot.startTime,
+          endTime: evalItem.slot.endTime,
+          // Add other slot fields as needed
+        } : null, // Ensure slot is null if not present
       };
     });
 
@@ -77,14 +82,7 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
         },
       })
       // .populate("student", "name") // Student will be populated via assignment
-      .populate({
-        path: "slot",
-        select: "startTime endTime bookedByStudent bookedForProject bookedForAssignment", // Add bookedForAssignment
-        populate: [
-          { path: "bookedByStudent", select: "name" },
-          { path: "bookedForProject", select: "title" },
-        ],
-      })
+      .populate("slot") // Populate the slot
       .sort("slot.startTime");
 
     const formattedEvaluations = evaluations.map(evalItem => {
@@ -116,7 +114,12 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
           student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Inclure les détails de l'étudiant peuplés
           // Add other assignment fields as needed
         },
-        studentName: assignment.student ? assignment.student.name : 'N/A', // Pour compatibilité frontend
+        slot: evalItem.slot ? { // Include slot details if it exists
+          _id: evalItem.slot._id,
+          startTime: evalItem.slot.startTime,
+          endTime: evalItem.slot.endTime,
+          // Add other slot fields as needed, if populated in the future
+        } : null, // Ensure slot is null if not present
       };
     });
 
