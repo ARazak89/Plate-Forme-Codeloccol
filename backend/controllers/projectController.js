@@ -400,7 +400,7 @@ export async function getAllProjects(req, res) {
       .populate({
         path: 'assignments.student',
         select: 'name email',
-      });
+      }).lean(); // Ajouter .lean() ici pour de meilleures performances
 
     res.status(200).json(projects);
   } catch (e) {
