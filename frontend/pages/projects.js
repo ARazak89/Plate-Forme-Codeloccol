@@ -400,6 +400,7 @@ function ProjectsPage() {
       const token = getAuthToken();
       // Charger les slots disponibles pour ce projet
       // La route doit maintenant prendre projectId et assignmentId
+      console.log(`Fetching available slots for Project ID: ${project.projectId}, Assignment ID: ${project.assignmentId}`);
       const slotsRes = await fetch(`${API}/api/availability/available-for-project/${project.projectId}/${project.assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
