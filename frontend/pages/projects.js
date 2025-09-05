@@ -821,20 +821,41 @@ function ProjectsPage() {
                     )}
                     
                     {/* Statut avec icône */}
-                    {selectedProject.type === 'my_project' && (
+                    {selectedProject.assignmentStatus && (
                       <div className="card mb-3 shadow-sm">
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-info-circle me-2"></i> Statut:</h6> 
-                          <span className={`badge rounded-pill bg-${selectedProject.status === 'assigned' ? 'warning text-dark' : selectedProject.status === 'pending' ? 'info' : 'success'}`}>
-                        <i className={`bi bi-${selectedProject.status === 'assigned' ? 'clock' : selectedProject.status === 'pending' ? 'hourglass-split' : 'check-circle'} me-1`}></i>
-                        {selectedProject.status === 'assigned' ? 'Assigné' : selectedProject.status === 'pending' ? 'En cours d\'évaluation' : 'Approuvé'}
-                      </span>
+                          <span className={`badge rounded-pill bg-${(() => {
+                            if (selectedProject.assignmentStatus === 'assigned') return 'primary';
+                            if (selectedProject.assignmentStatus === 'submitted') return 'warning text-dark';
+                            if (selectedProject.assignmentStatus === 'pending_review') return 'info';
+                            if (selectedProject.assignmentStatus === 'approved') return 'success';
+                            if (selectedProject.assignmentStatus === 'rejected') return 'danger';
+                            return 'secondary'; // Fallback
+                          })()}`}>
+                            <i className={`bi bi-${(() => {
+                              if (selectedProject.assignmentStatus === 'assigned') return 'clock';
+                              if (selectedProject.assignmentStatus === 'submitted') return 'hourglass-split';
+                              if (selectedProject.assignmentStatus === 'pending_review') return 'person-workspace';
+                              if (selectedProject.assignmentStatus === 'approved') return 'check-circle';
+                              if (selectedProject.assignmentStatus === 'rejected') return 'x-circle';
+                              return 'question-circle';
+                            })()} me-1`}></i>
+                            {(() => {
+                              if (selectedProject.assignmentStatus === 'assigned') return 'Assigné';
+                              if (selectedProject.assignmentStatus === 'submitted') return 'Soumis (en attente)';
+                              if (selectedProject.assignmentStatus === 'pending_review') return 'En attente Staff';
+                              if (selectedProject.assignmentStatus === 'approved') return 'Approuvé';
+                              if (selectedProject.assignmentStatus === 'rejected') return 'Rejeté';
+                              return 'Statut Inconnu';
+                            })()}
+                          </span>
                     </div>
                       </div>
                     )}
 
                     {/* Date de Soumission */}
-                    {selectedProject.submissionDate && selectedProject.type === 'my_project' && (
+                    {selectedProject.submissionDate && (
                       <div className="card mb-3 shadow-sm">
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-calendar-event me-2"></i> Date de Soumission:</h6> 
@@ -896,7 +917,7 @@ function ProjectsPage() {
                     <h6 className="text-primary mb-3">Liens</h6>
                     
                     {/* Dépôt GitHub avec bouton stylisé */}
-                    {selectedProject.repoUrl && selectedProject.type === 'my_project' && (
+                    {selectedProject.repoUrl && (
                       <div className="mb-3">
                         <a 
                           href={selectedProject.repoUrl} 

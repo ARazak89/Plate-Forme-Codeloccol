@@ -1572,6 +1572,48 @@ export default function Dashboard() {
       )}
       {showAddUserModal && <div className="modal-backdrop fade show"></div>}
 
+      {/* Section Hackathons et Badges (pour apprenant) */}
+      {me && me.role === 'apprenant' && mySubmittedEvaluations.length > 0 && (
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card shadow-sm">
+              <div className="card-header bg-gradient bg-secondary text-white d-flex align-items-center">
+                <i className="bi bi-chat-left-text me-2"></i>
+                <h2 className="h5 mb-0">Feedback sur Mes Projets Soumis</h2>
+              </div>
+              <div className="card-body">
+                <div className="list-group list-group-flush">
+                  {mySubmittedEvaluations.map((evaluation) => (
+                    <div key={evaluation._id} className="list-group-item">
+                      <h5 className="mb-2"><i className="bi bi-journal-check me-2"></i> Projet: {evaluation.project.title}</h5>
+                      <p className="mb-1"><strong><i className="bi bi-person me-2"></i>Évaluateur:</strong> {evaluation.evaluator.name}</p>
+                      {evaluation.slot && (
+                        <p className="mb-1"><strong><i className="bi bi-calendar-event me-2"></i>Date d'évaluation:</strong> {new Date(evaluation.slot.startTime).toLocaleString()}</p>
+                      )}
+                      <p className="mb-2"><strong><i className="bi bi-check-circle me-2"></i>Statut:</strong> 
+                        <span className={`badge bg-${evaluation.status === 'accepted' ? 'success' : 'danger'} ms-1`}>
+                          {evaluation.status === 'accepted' ? 'Accepté' : 'Rejeté'}
+                        </span>
+                      </p>
+                      {evaluation.feedback && (
+                        <div className="border rounded p-2 mt-2 bg-light">
+                          <h6><i className="bi bi-chat-dots me-2"></i>Détails du Feedback:</h6>
+                          {evaluation.feedback.assiduite && <p className="mb-1"><strong>Assiduité:</strong> {evaluation.feedback.assiduite}</p>}
+                          {evaluation.feedback.comprehension && <p className="mb-1"><strong>Compréhension:</strong> {evaluation.feedback.comprehension}</p>}
+                          {evaluation.feedback.specifications && <p className="mb-1"><strong>Spécifications:</strong> {evaluation.feedback.specifications}</p>}
+                          {evaluation.feedback.maitrise_concepts && <p className="mb-1"><strong>Maîtrise des concepts:</strong> {evaluation.feedback.maitrise_concepts}</p>}
+                          {evaluation.feedback.capacite_expliquer && <p className="mb-1"><strong>Capacité à expliquer:</strong> {evaluation.feedback.capacite_expliquer}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

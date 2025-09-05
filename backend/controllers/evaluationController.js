@@ -304,8 +304,8 @@ export async function submitEvaluation(req, res) {
         });
       }
     } else {
-      // Si toutes les évaluations ne sont pas encore complètes, le statut de l'assignation reste 'pending'
-      assignment.status = "pending";
+      // Si toutes les évaluations ne sont pas encore complètes, le statut de l'assignation passe à 'pending_review'
+      assignment.status = "pending_review";
     }
 
     await project.save(); // Sauvegarder le projet maître pour persister les changements de l'assignation
