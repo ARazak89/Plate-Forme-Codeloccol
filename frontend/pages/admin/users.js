@@ -181,7 +181,7 @@ function AdminUsersPage() {
         handleCloseEditUserModal();
         fetchUsers(token);
       } else {
-        throw new Error(data.error || "Échec de la mise à jour de l'utilisateur.");
+        throw new Error(data.error || "Échec de la mise à jour de l utilisateur.");
       }
     } catch (e) {
       console.error('Error updating user:', e);
@@ -211,7 +211,7 @@ function AdminUsersPage() {
         fetchUsers(token);
       } else {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Échec de la suppression de l'utilisateur.');
+        throw new Error(errorData.error || 'Échec de la suppression de l utilisateur.');
       }
     } catch (e) {
       console.error('Error deleting user:', e);
