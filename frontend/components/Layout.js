@@ -279,11 +279,11 @@ const Layout = ({ children }) => {
               </li>
               {user && (user.role === 'staff' || user.role === 'admin') && (
                 <li className="nav-item">
-                  <Link href="/admin/settings" className={`nav-link fs-5 ${
-                    router.pathname === '/admin/settings' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
+                  <Link href="/admin/users" className={`nav-link fs-5 ${
+                    router.pathname === '/admin/users' ? 'active text-primary fw-bold bg-light-blue rounded' : ''
                   }`}>
-                    <i className="bi bi-gear-fill me-2"></i>
-                    Admin/Staff
+                    <i className="bi bi-people-fill me-2"></i>
+                    Gestion des Utilisateurs
                   </Link>
                 </li>
               )}
