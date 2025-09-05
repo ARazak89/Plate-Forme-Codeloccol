@@ -204,6 +204,7 @@ export async function listUsers(req, res) {
         email: user.email,
         role: user.role,
         level: user.level,
+        status: user.status,
         daysRemaining: user.daysRemaining,
         assignedProject: latestAssignedProject, // Le projet assigné le plus récent
       };

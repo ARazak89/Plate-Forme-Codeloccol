@@ -94,7 +94,7 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
 
       return {
         ...evalItem.toObject(),
-        project: { // Only include necessary project master details
+        project: {
           _id: project._id,
           title: project.title,
           description: project.description,
@@ -105,21 +105,14 @@ export async function getPendingEvaluationsAsEvaluator(req, res) {
           resourceLinks: project.resourceLinks,
           objectives: project.objectives,
           size: project.size,
+          repoUrl: assignment.repoUrl, // Ajouter le repoUrl directement au projet
         },
-        assignment: { // Include specific assignment details
-          _id: assignment._id,
-          status: assignment.status,
-          repoUrl: assignment.repoUrl,
-          submissionDate: assignment.submissionDate,
-          student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Inclure les détails de l'étudiant peuplés
-          // Add other assignment fields as needed
-        },
-        slot: evalItem.slot ? { // Include slot details if it exists
+        student: assignment.student ? { _id: assignment.student._id, name: assignment.student.name, email: assignment.student.email } : null, // Peupler l'étudiant au niveau de l'évaluation
+        slot: evalItem.slot ? {
           _id: evalItem.slot._id,
           startTime: evalItem.slot.startTime,
           endTime: evalItem.slot.endTime,
-          // Add other slot fields as needed, if populated in the future
-        } : null, // Ensure slot is null if not present
+        } : null,
       };
     });
 

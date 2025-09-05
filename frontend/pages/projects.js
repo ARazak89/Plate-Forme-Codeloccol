@@ -849,7 +849,7 @@ function ProjectsPage() {
                       </div>
                     )}
 
-                    {selectedProject.repoUrl && selectedProject.type === 'to_evaluate' && (
+                    {selectedProject.repoUrl && (
                       <div className="card mb-3 shadow-sm">
                         <div className="card-body d-flex align-items-center">
                           <h6 className="mb-0 me-2 text-primary"><i className="bi bi-github me-2"></i> Dépôt du projet soumis:</h6> 
