@@ -181,7 +181,7 @@ function AdminUsersPage() {
         handleCloseEditUserModal();
         fetchUsers(token);
       } else {
-        throw new Error(data.error || 'Échec de la mise à jour de l'utilisateur.');
+        throw new Error(data.error || "Échec de la mise à jour de l'utilisateur.");
       }
     } catch (e) {
       console.error('Error updating user:', e);

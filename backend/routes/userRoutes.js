@@ -5,6 +5,7 @@ import {
   updateUserProfilePicture,
   listUsers,
   getUserById,
+  deleteUser,
   createUser,
   updateUser,
   toggleUserStatus,
