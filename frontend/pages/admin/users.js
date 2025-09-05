@@ -211,7 +211,7 @@ function AdminUsersPage() {
         fetchUsers(token);
       } else {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Échec de la suppression de l utilisateur.');
+        throw new Error(errorData.error || "Échec de la suppression de l'utilisateur.");
       }
     } catch (e) {
       console.error('Error deleting user:', e);
@@ -284,6 +284,7 @@ function AdminUsersPage() {
                 <th>Email</th>
                 <th>Rôle</th>
                 <th>Niveau</th>
+                <th>Jours Restants</th>
                 <th>Statut</th>
                 <th>Dernier Projet Assigné</th>
                 <th>Actions</th>
@@ -296,52 +297,27 @@ function AdminUsersPage() {
                   <td>{user.email}</td>
                   <td><span className="badge bg-secondary">{user.role}</span></td>
                   <td>{user.level || 'N/A'}</td>
+                  <td>{user.daysRemaining || 'N/A'}</td>
                   <td>
                     <span className={`badge bg-${user.status === 'active' ? 'success' : user.status === 'inactive' ? 'warning text-dark' : 'danger'}`}>
                       {user.status === 'active' ? 'Actif' : user.status === 'inactive' ? 'Inactif' : 'Bloqué'}
                     </span>
                   </td>
                   <td>
-                    {user.assignedProject ? (
-                      <>
-                        <strong>{user.assignedProject.title}</strong> (Ordre: {user.assignedProject.order})<br />
-                        <span className={`badge bg-${
-                          user.assignedProject.status === 'assigned' ? 'warning text-dark' :
-                          user.assignedProject.status === 'submitted' ? 'info' :
-                          user.assignedProject.status === 'awaiting_staff_review' ? 'primary' :
-                          user.assignedProject.status === 'approved' ? 'success' :
-                          user.assignedProject.status === 'rejected' ? 'danger' :
-                          'secondary'
-                        } mt-1`}>
-                          {user.assignedProject.status === 'assigned' ? 'Assigné' :
-                           user.assignedProject.status === 'submitted' ? 'Soumis' :
-                           user.assignedProject.status === 'awaiting_staff_review' ? 'En attente staff' :
-                           user.assignedProject.status === 'approved' ? 'Approuvé' :
-                           user.assignedProject.status === 'rejected' ? 'Rejeté' :
-                           'Inconnu'}
-                        </span>
-                        {user.assignedProject.repoUrl && (
-                          <div className="mt-1">
-                            <a href={user.assignedProject.repoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-link btn-sm p-0 text-decoration-none">
-                              <i className="bi bi-github me-1"></i> Dépôt
-                            </a>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      'Aucun projet assigné'
-                    )}
+                    {user.assignedProject ? user.assignedProject.title : 'Aucun'}
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleShowEditUserModal(user)} title="Modifier Utilisateur">
-                      <i className="bi bi-pencil-square"></i>
-                    </button>
-                    <button className="btn btn-sm btn-outline-warning text-dark me-2" onClick={() => handleShowToggleStatusModal(user)} title="Changer Statut">
-                      <i className={`bi bi-${user.status === 'active' ? 'person-x' : 'person-check'}`}></i>
-                    </button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleShowDeleteUserModal(user)} title="Supprimer Utilisateur">
-                      <i className="bi bi-trash"></i>
-                    </button>
+                    <div className="btn-group btn-group-sm" role="group" aria-label="Actions utilisateur">
+                      <button className="btn btn-outline-info" onClick={() => handleShowEditUserModal(user)} title="Modifier Utilisateur">
+                        <i className="bi bi-pencil-square"></i>
+                      </button>
+                      <button className="btn btn-outline-warning text-dark" onClick={() => handleShowToggleStatusModal(user)} title="Changer Statut">
+                        <i className={`bi bi-${user.status === 'active' ? 'person-x' : 'person-check'}`}></i>
+                      </button>
+                      <button className="btn btn-outline-danger" onClick={() => handleShowDeleteUserModal(user)} title="Supprimer Utilisateur">
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
