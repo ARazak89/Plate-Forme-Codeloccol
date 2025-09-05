@@ -602,9 +602,28 @@ function ProjectsPage() {
                               <td><span className="badge bg-success rounded-pill"><i className="bi bi-person-check me-1"></i> Apprenant</span></td>
                               <td>{assignedProject.student ? assignedProject.student.name : 'N/A'}</td>
                               <td>
-                                <span className={`badge bg-${assignedProject.status === 'approved' ? 'success' : assignedProject.status === 'rejected' ? 'danger' : 'warning'} rounded-pill`}>
-                                  <i className={`bi bi-${assignedProject.status === 'approved' ? 'check-circle' : assignedProject.status === 'rejected' ? 'x-circle' : 'hourglass-split'} me-1`}></i>
-                                  {assignedProject.status === 'approved' ? 'Approuvé' : assignedProject.status === 'rejected' ? 'Rejeté' : 'En attente'}
+                                <span className={`badge rounded-pill bg-${ 
+                                  assignedProject.status === 'assigned' ? 'warning text-dark' : 
+                                  assignedProject.status === 'submitted' ? 'info' : 
+                                  assignedProject.status === 'awaiting_staff_review' ? 'primary' : 
+                                  assignedProject.status === 'approved' ? 'success' : 
+                                  assignedProject.status === 'rejected' ? 'danger' : 
+                                  'secondary' 
+                                }`}>
+                                  <i className={`bi bi-${ 
+                                  assignedProject.status === 'assigned' ? 'clock' : 
+                                  assignedProject.status === 'submitted' ? 'hourglass-split' : 
+                                  assignedProject.status === 'awaiting_staff_review' ? 'person-workspace' : 
+                                  assignedProject.status === 'approved' ? 'check-circle' : 
+                                  assignedProject.status === 'rejected' ? 'x-circle' : 
+                                  'question-circle' 
+                                  } me-1`}></i>
+                                  {assignedProject.status === 'assigned' ? 'Assigné' : 
+                                   assignedProject.status === 'submitted' ? 'Soumis (en attente des pairs)' : 
+                                   assignedProject.status === 'awaiting_staff_review' ? 'En attente de révision staff' : 
+                                   assignedProject.status === 'approved' ? 'Approuvé' : 
+                                   assignedProject.status === 'rejected' ? 'Rejeté' : 
+                                   'Inconnu'}
                                 </span>
                               </td>
                               <td className="text-center">
