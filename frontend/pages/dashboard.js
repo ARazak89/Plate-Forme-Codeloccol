@@ -976,7 +976,7 @@ export default function Dashboard() {
                           <div>
                             <h5 className="mb-1"><i className="bi bi-journals me-2"></i> Projet: {projectGroup.project.title} (Soumis par: {projectGroup.project.student?.name})</h5>
                             <small className="text-muted d-flex align-items-center mt-1">Statut du projet: <span className="badge bg-info ms-1 rounded-pill">{(projectGroup.project.status).replace(/_/g, ' ')}</span></small>
-                            <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{'projectGroup.project.repoUrl'}</a></small>
+                            <small className="text-muted d-flex align-items-center mt-1">Dépôt: <a href={projectGroup.project.repoUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none">{projectGroup.project.repoUrl}</a></small>
                           </div>
                           <div className="mt-3 w-100">
                             <strong>Évaluations des pairs :</strong>
