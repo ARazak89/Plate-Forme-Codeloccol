@@ -150,7 +150,7 @@ function AdminUsersPage() {
         handleCloseAddUserModal();
         fetchUsers(token);
       } else {
-        throw new Error(data.error || 'Échec de la création de l'utilisateur.');
+        throw new Error(data.error || "Échec de la création de l'utilisateur.");
       }
     } catch (e) {
       console.error('Error creating user:', e);
