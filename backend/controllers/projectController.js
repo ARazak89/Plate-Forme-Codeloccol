@@ -145,6 +145,11 @@ export async function getStudentProjects(req, res) {
           projectId: project._id, // Ajout de l'ID du projet maître
           title: project.title,
           description: project.description,
+          objectives: project.objectives,
+          specifications: project.specifications,
+          exerciseStatements: project.exerciseStatements,
+          resourceLinks: project.resourceLinks,
+          demoVideoUrl: project.demoVideoUrl,
           status: project.status, // Statut du projet maître
           assignmentId: studentAssignment._id,
           assignmentStatus: studentAssignment.status,
