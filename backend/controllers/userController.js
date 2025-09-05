@@ -284,7 +284,7 @@ export async function deleteUser(req, res) {
   }
 }
 
-export async function createUserByAdmin(req, res) {
+export async function createUser(req, res) {
   try {
     const { name, email, password, role } = req.body;
 
@@ -348,6 +348,86 @@ export async function createUserByAdmin(req, res) {
     res.status(201).json({ message: 'Utilisateur créé avec succès.', user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role } });
   } catch (e) {
     console.error("Error creating user by admin:", e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateUser(req, res) {
+  try {
+    const { id } = req.params; // ID de l'utilisateur à modifier
+    const { name, email, password, role, status, level } = req.body;
+
+    // Vérifier l'autorisation (seuls staff/admin peuvent modifier les utilisateurs)
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Non autorisé à modifier les utilisateurs.' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Mettre à jour les champs si fournis
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) {
+      if (!['apprenant', 'staff', 'admin'].includes(role)) {
+        return res.status(400).json({ error: 'Rôle invalide.' });
+      }
+      user.role = role;
+    }
+    if (status) {
+      if (!['active', 'inactive', 'blocked'].includes(status)) {
+        return res.status(400).json({ error: 'Statut invalide.' });
+      }
+      user.status = status;
+    }
+    if (level !== undefined) {
+      user.level = level;
+    }
+
+    // Hacher le nouveau mot de passe si fourni
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    await user.save();
+
+    res.status(200).json({ message: 'Utilisateur mis à jour avec succès.', user: { _id: user._id, name: user.name, email: user.email, role: user.role, status: user.status, level: user.level } });
+  } catch (e) {
+    console.error("Error updating user:", e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function toggleUserStatus(req, res) {
+  try {
+    const { id } = req.params; // ID de l'utilisateur à modifier
+    const { status } = req.body; // Le nouveau statut (active, inactive, blocked)
+
+    // Vérifier l'autorisation (seuls staff/admin peuvent modifier le statut)
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Non autorisé à modifier le statut des utilisateurs.' });
+    }
+
+    if (!['active', 'inactive', 'blocked'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide. Les statuts valides sont active, inactive, blocked.' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    ).select('-password'); // Exclure le mot de passe du résultat
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    res.status(200).json({ message: `Statut de l'utilisateur mis à jour à \'${status}\' avec succès.`, user: { _id: user._id, name: user.name, status: user.status } });
+  } catch (e) {
+    console.error("Error toggling user status:", e);
     res.status(500).json({ error: e.message });
   }
 }

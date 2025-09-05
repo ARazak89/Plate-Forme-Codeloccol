@@ -585,12 +585,14 @@ function ProjectsPage() {
                           <td>N/A</td>
                           <td><span className="badge bg-secondary rounded-pill"><i className="bi bi-puzzle-fill me-1"></i> Actif</span></td>
                           <td className="text-center">
-                            <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(projectGroup)} title="Modifier Projet Maître">
-                              <i className="bi bi-pencil-square"></i>
-                            </button>
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(projectGroup)} title="Supprimer Projet Maître">
-                              <i className="bi bi-trash"></i>
-                            </button>
+                            <div className="btn-group btn-group-sm" role="group" aria-label="Actions pour projet maître">
+                              <button className="btn btn-outline-info" onClick={() => handleEditProject(projectGroup)} title="Modifier Projet Maître">
+                                <i className="bi bi-pencil-square"></i>
+                              </button>
+                              <button className="btn btn-outline-danger" onClick={() => handleDeleteProject(projectGroup)} title="Supprimer Projet Maître">
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         {projectGroup.assignments.length > 0 ? (
@@ -627,12 +629,14 @@ function ProjectsPage() {
                                 </span>
                               </td>
                               <td className="text-center">
-                                <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleEditProject(assignedProject)} title="Modifier Projet de l'Apprenant">
-                                  <i className="bi bi-pencil-square"></i>
-                                </button>
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteProject(assignedProject)} title="Supprimer Projet de l'Apprenant">
-                                  <i className="bi bi-trash"></i>
-                                </button>
+                                <div className="btn-group btn-group-sm" role="group" aria-label="Actions pour projet d'apprenant">
+                                  <button className="btn btn-outline-info" onClick={() => handleEditProject(assignedProject)} title="Modifier Projet de l'Apprenant">
+                                    <i className="bi bi-pencil-square"></i>
+                                  </button>
+                                  <button className="btn btn-outline-danger" onClick={() => handleDeleteProject(assignedProject)} title="Supprimer Projet de l'Apprenant">
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))

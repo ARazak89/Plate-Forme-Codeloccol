@@ -1,15 +1,13 @@
 import { Router } from "express";
 import {
   me,
-  unblock,
-  updateUserNameAndEmail,
   updateUserPassword,
   updateUserProfilePicture,
   listUsers,
   getUserById,
-  updateUserRole,
-  deleteUser,
-  createUserByAdmin, // Importez la nouvelle fonction de contrôleur
+  createUser,
+  updateUser,
+  toggleUserStatus,
 } from "../controllers/userController.js";
 import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js"; // Importer le middleware d'upload
@@ -27,17 +25,21 @@ r.put(
 ); // Modifier la photo de profil avec upload de fichier
 
 // Routes accessibles uniquement au staff/admin
-r.post("/", requireAuth, requireRole(["staff", "admin"]), createUserByAdmin); // Nouvelle route pour créer un utilisateur
+r.post("/", requireAuth, requireRole(["staff", "admin"]), createUser); // Créer un utilisateur
 r.put(
-  "/:id/info",
+  "/:id", // Nouvelle route pour la mise à jour complète
   requireAuth,
   requireRole(["staff", "admin"]),
-  updateUserNameAndEmail,
-); // Modifier nom et email (par staff/admin)
+  updateUser, // Utiliser la fonction updateUser unifiée
+);
 r.get("/", requireAuth, requireRole(["staff", "admin"]), listUsers);
 r.get("/:id", requireAuth, requireRole(["staff", "admin"]), getUserById);
-r.put("/:id/role", requireAuth, requireRole(["admin"]), updateUserRole);
 r.delete("/:id", requireAuth, requireRole(["admin"]), deleteUser);
-r.post("/:id/unblock", requireAuth, requireRole(["staff", "admin"]), unblock);
+r.put(
+  "/:id/status",
+  requireAuth,
+  requireRole(["staff", "admin"]),
+  toggleUserStatus,
+);
 
 export default r;
